@@ -1,0 +1,47 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core/Inc",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
+                "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core/Inc",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                    "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
+                    "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60113",
+                "STM32F405xx",
+                "STM32F4xx",
+                "F_CPU=168000000L",
+                ""
+            ],
+            "compilerPath": "C:/Users/a.vasilchenko/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc.exe",
+            "compilerArgs": [
+                "-mthumb",
+                "-mcpu=cortex-m4",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
