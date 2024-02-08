@@ -1,3 +1,4 @@
+#include "main.h"
 #include "stm32f4xx.h"
 /* USER CODE BEGIN Header */
 /**
@@ -18,7 +19,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "Core/Inc/main.h"
+
 /*
 #include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h"
 #include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dac.h"
@@ -100,9 +101,11 @@ void ADC_SCAN (void);
   * @brief  The application entry point.
   * @retval int
   */
+
 int main()
 {
-  /* USER CODE BEGIN 1 */
+
+   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
@@ -208,7 +211,7 @@ ADC_SCAN ();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-  //return 0 ;
+ // return 0 ;
 }
 
 /**

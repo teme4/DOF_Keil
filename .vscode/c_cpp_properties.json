@@ -8,10 +8,13 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
                 "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core",
                 "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core/Inc",
                 "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS/Include",
                 "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                 "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
                 ""
@@ -19,10 +22,13 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
                     "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/src",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core",
                     "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Core/Inc",
                     "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS/Include",
                     "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                     "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
                     ""
@@ -32,6 +38,7 @@
                 "PLATFORMIO=60113",
                 "STM32F405xx",
                 "STM32F4xx",
+                "USE_FULL_LL_DRIVER",
                 "F_CPU=168000000L",
                 ""
             ],

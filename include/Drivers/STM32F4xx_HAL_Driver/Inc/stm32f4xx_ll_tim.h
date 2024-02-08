@@ -2870,7 +2870,7 @@ __STATIC_INLINE void LL_TIM_ConfigETR(TIM_TypeDef *TIMx, uint32_t ETRPolarity, u
   * @brief  Enable the break function.
   * @note Macro IS_TIM_BREAK_INSTANCE(TIMx) can be used to check whether or not
   *       a timer instance provides a break input.
-  * @rmtoll BDTR         BKE           LL_TIM_EnableBRK
+  * @rmtoll BDTR         BKE           
   * @param  TIMx Timer instance
   * @retval None
   */
@@ -2880,7 +2880,8 @@ __STATIC_INLINE void LL_TIM_EnableBRK(TIM_TypeDef *TIMx)
   SET_BIT(TIMx->BDTR, TIM_BDTR_BKE);
   /* Note: Any write operation to this bit takes a delay of 1 APB clock cycle to become effective. */
   tmpreg = READ_REG(TIMx->BDTR);
-  (void)(tmpreg);
+  //(void)(tmpreg);
+  __NOP();
 }
 
 /**
