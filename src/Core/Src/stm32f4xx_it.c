@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
+#include "main.hpp"
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -63,10 +63,10 @@ extern volatile unsigned short bias[1601];
 volatile uint8_t rx1[18];
 volatile uint8_t rx1_s[18];
   uint8_t rx2[10] __attribute__((used));
- uint8_t ptr=0;
- uint8_t ptr2=0;
+  uint8_t ptr=0;
+  uint8_t ptr2=0;
   uint16_t baddr=700;
-	int16_t bias_off=-173+26+77-58+16+64;
+  int16_t bias_off=-173+26+77-58+16+64;
 	//300+119-185+135+80-79-109+130-16+96;//-146-32-210+96; //-292
 	uint16_t threshold = 0x12d;//0x132;//139
 volatile uint8_t cntspi2=0;
@@ -257,7 +257,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
 //			else
 		{
 		LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));//-512+16+64               +48+32 -320 - BRI, -320+177 - slx4-2, -320+260 itmo 001, -320+147, -320+250+359 itmo 009, -320+196itmo 005, -320+480 Q?, -320+522 011
-	  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);//48+256*1); // 44 76  72+4+256*1   176+8+256*2
+	    LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);//48+256*1); // 44 76  72+4+256*1   176+8+256*2
 		}
 		// 67A@4719 det 025
 	}
@@ -304,29 +304,16 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
 			pkuc[3]=spi_rx16[3]&0x00ff;
 			pkuc[4]=(spi_rx16[3]>>8)&0x0f;			
  return; 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-  /* USER CODE BEGIN TIM8_TRG_COM_TIM14_IRQn 1 */
+	}
 
-  /* USER CODE END TIM8_TRG_COM_TIM14_IRQn 1 */
-}
 
-/* USER CODE BEGIN 1 */
+/*
 void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART1_IRQn 0 */
-    /* RXNE handler */
+ 
   //  if(LL_USART_IsActiveFlag_RXNE(USART1) != 0)
   //  {
-        /* If received 't', toggle LED and transmit 'T' */
+        //If received 't', toggle LED and transmit 'T' 
   rx1[ptr2]=       LL_USART_ReceiveData8(USART1);
 	if(rx1[0] == 170)
 	{
@@ -400,7 +387,7 @@ void USART1_IRQHandler(void)
 				
 			LL_USART_TransmitData8(USART1,57);
 			}
-/*		}	
+		}	
 			LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9);
 	      LL_SPI_Enable(SPI2);	
 			ptr=2;
@@ -419,27 +406,18 @@ void USART1_IRQHandler(void)
 			LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9);
 						LL_SPI_Disable(SPI2);	
 			
-*/			
+		
 			ptr2=0;		
 		}
 			ptr2=0;
-		}
-		
-		
+		}		
 	}
 	else
 	{
 		ptr2=0;
 	}
  
-            /* Wait until Tx data register is empty, not really 
-             * required for this example but put in here anyway.
-             */
-            /*
-            while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
-            {
-            }*/
-       return; }
-
-
-/* USER CODE END 1 */
+         
+       return;   
+}
+*/

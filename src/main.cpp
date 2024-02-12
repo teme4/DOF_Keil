@@ -1,67 +1,18 @@
-#include "main.h"
-#include "stm32f4xx.h"
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
+#include "main.hpp"
+#include "gpio.hpp"
+#include "usart.hpp"
+#include <string>
+#include <vector>
+#include "math.h"
 
-/*
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dac.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_rcc.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_bus.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_system.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_exti.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_cortex.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_utils.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_pwr.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dma.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_tim.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h"
-#include "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h"
-*/
-/* Includes ------------------------------------------------------------------*/
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+uint8_t *TxBuffer;
+uint8_t RxBuffer[100];
+uint8_t TxCounter = 0, RxCounter = 0;
+std::vector<char> TxData; // Вектор целых чисел
 
-/* USER CODE END Includes */
 
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-uint16_t ctr=0;
-uint16_t dt=0;
+uint16_t ctr=0,dt=0;
 unsigned short DATA_ADC[4];
 unsigned int DATA_ADCacc;
 volatile unsigned int DATA_ADCaccout;
@@ -77,7 +28,17 @@ extern uint8_t rx1_s[18];
 extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 
-/* USER CODE END PV */
+
+uint8_t pin_ready=9,led_red=11,led_green=10;
+gpio gpio_stm32f405;
+usart uart_1;
+char buffer[100]; // Буфер для хранения строки
+double volt=0;
+double temp_int=0,temp_ext=0;
+
+
+
+
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -86,138 +47,41 @@ static void MX_ADC1_Init(void);
 static void MX_DAC_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_TIM14_Init(void);
-/* USER CODE BEGIN PFP */
 
-/* USER CODE END PFP */
 void ADC_SCAN (void);
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
 
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-
-int main()
+void delay_ms(uint32_t us)
 {
+    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN; 
+    TIM8->PSC = 0; // Настройка предделителя
+    TIM8->ARR = 8000-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
+    TIM8->CNT = 0; // Сброс счетчика
+    TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
 
-   /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
-
-  /* System interrupt init*/
-  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-
-  /* SysTick_IRQn interrupt configuration */
-  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_ADC1_Init();
-  MX_DAC_Init();
-  MX_SPI2_Init();
-  MX_SPI3_Init();
-  MX_USART1_UART_Init();
-	LL_USART_EnableIT_RXNE(USART1);
-  MX_TIM14_Init();
-  /* USER CODE BEGIN 2 */
-	
-		LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
-	rx1[4]=32;
-	rx0[0]=170;
-	rx0[1]=60;
-	rx0[2]=0;//7 6 6 
-	rx0[3]=0xe0;//32; //55 159 213 245 240
-	rx0[4]=7;//10;//2
-	rx0[5]=64;//104;
-	rx0[6]=1;//2;//4   2 1 2 mag- 3/190 gib- 2/137
-	rx0[7]=52;//170;  //158 145 169 144 148 164 132 168 138
-	rx0[8]=128;	
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
-	//LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, rx0[3]+256*rx0[2]);	
-	
-	
-	
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
-	
-	
-//	LL_SPI_Enable(SPI2);
-
-		
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
-ADC_SCAN ();
-		rx1_s[0]=rx1[0];
-		if ((DATA_ADCaccout2<=7000)&&(DATA_ADCaccout2>=3000))
-		{
-		rx1_s[1]=temp[DATA_ADCaccout2/2-1500]>>8;//DATA_ADCaccout2>>8;
-		rx1_s[2]=temp[DATA_ADCaccout2/2-1500]&255;//DATA_ADCaccout2&255;
-		}
-		else
-		{
-			if (DATA_ADCaccout2>7000)
-			{
-				rx1_s[1]=2;
-				rx1_s[2]=0;
-			}
-			else
-			{
-				rx1_s[1]=0;
-				rx1_s[2]=100;
-			}
-				
-		}
-		
-		rx1_s[3]=rx1[3];
-		rx1_s[4]=DATA_ADCaccout1>>8;
-		rx1_s[5]=DATA_ADCaccout1&255;
-		rx1_s[6]=1;
-		rx1_s[7]=3;
-		rx1_s[8]=temp[DATA_ADCaccout3/2-1500]>>8;//DATA_ADCaccout3>>8;
-		rx1_s[9]=temp[DATA_ADCaccout3/2-1500]&255;//DATA_ADCaccout3&255;	
-		rx1_s[10]=1;
-		rx1_s[11]=10;
-		rx1_s[12]=1;
-		rx1_s[13]=0;		
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
- // return 0 ;
+    while(us--)
+    {
+        while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
+        TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
+    }
+    TIM8->CR1 = 0; // Выключение таймера
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+void delay_us(uint32_t us)
+{
+    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN; 
+    TIM8->PSC = 0; // Настройка предделителя
+    TIM8->ARR = 80-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
+    TIM8->CNT = 0; // Сброс счетчика
+    TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
+
+    while(us--)
+    {
+        while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
+        TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
+    }
+    TIM8->CR1 = 0; // Выключение таймера
+}
 
 void ADC_SCAN (void)
 {
@@ -284,15 +148,21 @@ void ADC_SCAN (void)
 	DATA_ADCaccout3=DATA_ADCacc3/512;
 	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
 	{
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,1); 
+  gpio_stm32f405.set_pin_state(GPIOB,pin_ready,0);
+  gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
+	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
+	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 	else
 	{
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,0); 
+  gpio_stm32f405.set_pin_state(GPIOB,pin_ready,1);
+  gpio_stm32f405.set_pin_state(GPIOB,led_green,1);
+	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 	//DATA_ADC =257;
 //	ADC1->SQR3 = 2;
@@ -315,9 +185,13 @@ void ADC_SCAN (void)
 //	while (!(ADC1->SR & ADC_SR_EOC)) ;
 //	DATA_ADC[6] = ADC1->DR;
 	
+  volt=DATA_ADC[2]*(3.3/4096);
+  temp_int=sqrt(2196200+((1.8639-volt)/0.00000388))-1481.96;
+  //ext temp
+  volt=DATA_ADC[3]*(3.3/4096);
+  temp_ext=sqrt(2196200+((1.8639-volt)/0.00000388))-1481.96;
+  volt=0;
 }
-
-
 
 void SystemClock_Config(void)
 {
@@ -348,17 +222,9 @@ void SystemClock_Config(void)
   LL_SetSystemCoreClock(16000000);
 }
 
-/**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_ADC1_Init(void)
 {
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
 
   LL_ADC_InitTypeDef ADC_InitStruct = {0};
   LL_ADC_REG_InitTypeDef ADC_REG_InitStruct = {0};
@@ -392,12 +258,7 @@ static void MX_ADC1_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN ADC1_Init 1 */
 
-  /* USER CODE END ADC1_Init 1 */
-
-  /** Common config
-  */
   ADC_InitStruct.Resolution = LL_ADC_RESOLUTION_12B;
   ADC_InitStruct.DataAlignment = LL_ADC_DATA_ALIGN_RIGHT;
   ADC_InitStruct.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
@@ -417,32 +278,18 @@ static void MX_ADC1_Init(void)
   */
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_0);
   LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_0, LL_ADC_SAMPLINGTIME_3CYCLES);
-  /* USER CODE BEGIN ADC1_Init 2 */
  ADC1->CR2 |= ADC_CR2_ADON; 
-
-  /* USER CODE END ADC1_Init 2 */
-
 }
 
-/**
-  * @brief DAC Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_DAC_Init(void)
 {
-
-  /* USER CODE BEGIN DAC_Init 0 */
-
-  /* USER CODE END DAC_Init 0 */
-
   LL_DAC_InitTypeDef DAC_InitStruct = {0};
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* Peripheral clock enable */
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_DAC1);
 
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_DAC1);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
   /**DAC GPIO Configuration
   PA4   ------> DAC_OUT1
@@ -453,38 +300,22 @@ static void MX_DAC_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN DAC_Init 1 */
-
-  /* USER CODE END DAC_Init 1 */
-
-  /** DAC channel OUT1 config
-  */
   DAC_InitStruct.TriggerSource = LL_DAC_TRIG_SOFTWARE;
   DAC_InitStruct.WaveAutoGeneration = LL_DAC_WAVE_AUTO_GENERATION_NONE;
   DAC_InitStruct.OutputBuffer = LL_DAC_OUTPUT_BUFFER_ENABLE;
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_1, &DAC_InitStruct);
 
-  /** DAC channel OUT2 config
-  */
+  /** DAC channel OUT2 config*/
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_2, &DAC_InitStruct);
-  /* USER CODE BEGIN DAC_Init 2 */
+ 
  DAC -> CR |= (DAC_CR_EN1)|(DAC_CR_EN2);
-  /* USER CODE END DAC_Init 2 */
+
 
 }
 
-/**
-  * @brief SPI2 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_SPI2_Init(void)
 {
-
-  /* USER CODE BEGIN SPI2_Init 0 */
-
-  /* USER CODE END SPI2_Init 0 */
-
   LL_SPI_InitTypeDef SPI_InitStruct = {0};
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -507,10 +338,6 @@ static void MX_SPI2_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN SPI2_Init 1 */
-
-  /* USER CODE END SPI2_Init 1 */
-  /* SPI2 parameter configuration*/
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
   SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_8BIT;
@@ -523,25 +350,12 @@ static void MX_SPI2_Init(void)
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI2, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
-  /* USER CODE BEGIN SPI2_Init 2 */
+  }
 
-  /* USER CODE END SPI2_Init 2 */
-
-}
-
-/**
-  * @brief SPI3 Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_SPI3_Init(void)
 {
 
-  /* USER CODE BEGIN SPI3_Init 0 */
-
-  /* USER CODE END SPI3_Init 0 */
-
-  LL_SPI_InitTypeDef SPI_InitStruct = {0};
+   LL_SPI_InitTypeDef SPI_InitStruct = {0};
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -572,10 +386,7 @@ static void MX_SPI3_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
   LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN SPI3_Init 1 */
 
-  /* USER CODE END SPI3_Init 1 */
-  /* SPI3 parameter configuration*/
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
   SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;//LL_SPI_DATAWIDTH_8BIT;
@@ -588,23 +399,10 @@ static void MX_SPI3_Init(void)
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI3, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
-  /* USER CODE BEGIN SPI3_Init 2 */
-
-  /* USER CODE END SPI3_Init 2 */
-
 }
 
-/**
-  * @brief TIM14 Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_TIM14_Init(void)
 {
-
-  /* USER CODE BEGIN TIM14_Init 0 */
-
-  /* USER CODE END TIM14_Init 0 */
 
   LL_TIM_InitTypeDef TIM_InitStruct = {0};
   LL_TIM_OC_InitTypeDef TIM_OC_InitStruct = {0};
@@ -616,10 +414,7 @@ static void MX_TIM14_Init(void)
   NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
   NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
 
-  /* USER CODE BEGIN TIM14_Init 1 */
-
-  /* USER CODE END TIM14_Init 1 */
-  TIM_InitStruct.Prescaler = 0x0008;//0x8000;
+    TIM_InitStruct.Prescaler = 0x0008;//0x8000;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 0x1000;//65535;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -632,77 +427,18 @@ static void MX_TIM14_Init(void)
   TIM_OC_InitStruct.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
   LL_TIM_OC_Init(TIM14, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_DisableFast(TIM14, LL_TIM_CHANNEL_CH1);
-  /* USER CODE BEGIN TIM14_Init 2 */
+
 	//TIM14->CR1=0x81;
   //TIM14->CCMR1=0x30;	
 	//TIM14->CCER=1;
 	//TIM14->BDTR=0xA000;
 		TIM14->CR1=0x81;
-  TIM14->PSC=0x8000;	// 0x0400
-	 TIM14->DIER=0x0001;
-  /* USER CODE END TIM14_Init 2 */
+    TIM14->PSC=0x8000;	// 0x0400
+	  TIM14->DIER=0x0001;
+
 
 }
 
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  LL_USART_InitTypeDef USART_InitStruct = {0};
-
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* Peripheral clock enable */
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
-
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-  /**USART1 GPIO Configuration
-  PA9   ------> USART1_TX
-  PA10   ------> USART1_RX
-  */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_9|LL_GPIO_PIN_10;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_7;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  USART_InitStruct.BaudRate = 115200;
-  USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
-  USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
-  USART_InitStruct.Parity = LL_USART_PARITY_NONE;
-  USART_InitStruct.TransferDirection = LL_USART_DIRECTION_TX_RX;
-  USART_InitStruct.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  USART_InitStruct.OverSampling = LL_USART_OVERSAMPLING_16;
-  LL_USART_Init(USART1, &USART_InitStruct);
-	 LL_USART_DisableIT_CTS(USART1);
-  LL_USART_ConfigAsyncMode(USART1);
-  LL_USART_Enable(USART1);
-  /* USER CODE BEGIN USART1_Init 2 */
-  /* TIM14 interrupt Init */
-  NVIC_SetPriority(USART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(USART1_IRQn);
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
 static void MX_GPIO_Init(void)
 {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -778,38 +514,178 @@ static void MX_GPIO_Init(void)
 
 }
 
-/* USER CODE BEGIN 4 */
+int main()
+{
 
-/* USER CODE END 4 */
+//gpio gpio_stm32f405;
+//UASRT1_gpio PA9 -> Tx  PA10 -> Rx
+gpio_stm32f405.gpio_init(GPIOA,9,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
+gpio_stm32f405.gpio_init(GPIOA,10,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
+gpio_stm32f405.config_af(GPIOA,9,7);//AF7
+gpio_stm32f405.config_af(GPIOA,10,7);//AF7
+//GPIO inpuy/output
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+gpio_stm32f405.gpio_init(GPIOB,pin_ready,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,led_red,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,led_green,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//lolka
+
+uart_1.usart_init();
+
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
+
+  /* System interrupt init*/
+  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+
+  /* SysTick_IRQn interrupt configuration */
+  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
+
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_ADC1_Init();
+  MX_DAC_Init();
+  MX_SPI2_Init();
+  MX_SPI3_Init();
+	//LL_USART_EnableIT_RXNE(USART1);
+  MX_TIM14_Init();
+	
+	LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
+
+	rx1[4]=32;
+	rx0[0]=170;
+	rx0[1]=60;
+	rx0[2]=0;//7 6 6 
+	rx0[3]=0xe0;//32; //55 159 213 245 240
+	rx0[4]=7;//10;//2
+	rx0[5]=64;//104;
+	rx0[6]=1;//2;//4   2 1 2 mag- 3/190 gib- 2/137
+	rx0[7]=52;//170;  //158 145 169 144 148 164 132 168 138
+	rx0[8]=0;	//128
+	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
+	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
+	//LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, rx0[3]+256*rx0[2]);	
+	
+  LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
+	//	LL_SPI_Enable(SPI2);
+
+
+uart_1.uart_tx_data("Start Programm");
+uart_1.uart_tx_data("BreakPoint_1");
+
+
+//USART1->DR=myString;
+
+/*
+while(1)
+{
+  gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,1); 
+	delay_ms(2000);	
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,0);
+  gpio_stm32f405.set_pin_state(GPIOB,led_green,1);	
+  delay_ms(2000);	
+}
+*/
+
+
+
+  while (1)
+  {
+
+ADC_SCAN ();
+
+		rx1_s[0]=rx1[0];
+		if ((DATA_ADCaccout2<=7000)&&(DATA_ADCaccout2>=3000))
+		{
+		rx1_s[1]=temp[DATA_ADCaccout2/2-1500]>>8;//DATA_ADCaccout2>>8;
+		rx1_s[2]=temp[DATA_ADCaccout2/2-1500]&255;//DATA_ADCaccout2&255;
+		}
+		else
+		{
+			if (DATA_ADCaccout2>7000)
+			{
+				rx1_s[1]=2;
+				rx1_s[2]=0;
+			}
+			else
+			{
+				rx1_s[1]=0;
+				rx1_s[2]=100;
+			}
+				
+		}
+		
+		rx1_s[3]=rx1[3];
+		rx1_s[4]=DATA_ADCaccout1>>8;
+		rx1_s[5]=DATA_ADCaccout1&255;
+		rx1_s[6]=1;
+		rx1_s[7]=3;
+		rx1_s[8]=temp[DATA_ADCaccout3/2-1500]>>8;//DATA_ADCaccout3>>8;
+		rx1_s[9]=temp[DATA_ADCaccout3/2-1500]&255;//DATA_ADCaccout3&255;	
+		rx1_s[10]=1;
+		rx1_s[11]=10;
+		rx1_s[12]=1;
+		rx1_s[13]=0;		
+  }
+}
+
+
+
+
+
+ /**********************************************************************************
+     * @brief Прием и передача данных прерывания
+     *********************************************************************************/
+      extern "C" void USART1_IRQHandler(void)
+      {
+   /* if (USART1->SR & USART_SR_TXE) // Проверка флага TXE
+    {
+        USART1->DR = TxData[TxCounter++];// & 0xFF; // Отправка данных
+        if (TxCounter > TxData.size())
+        {
+            USART1->CR1 &= ~USART_CR1_TXEIE; // Отключение прерывания TXE
+        }      
+    }*/
+
+    if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
+    {
+        RxBuffer[RxCounter++] = USART1->DR; // Прием данных
+             uart_1.uart_tx_byte(USART1->DR);
+             uart_1.uart_tx_byte(10);//\n
+             char value_T='T';
+             if(USART1->DR==value_T)
+             {
+                sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]); 
+                uart_1.uart_tx_data(buffer);
+                sprintf(buffer, "DATA_ADC[1]: %d", DATA_ADC[1]); 
+                uart_1.uart_tx_data(buffer);
+                sprintf(buffer, "DATA_ADC[2]: %d", DATA_ADC[2]); 
+                uart_1.uart_tx_data(buffer);
+                sprintf(buffer, "DATA_ADC[3]: %d", DATA_ADC[3]); 
+                uart_1.uart_tx_data(buffer);
+             }
+    }
+}
+
+
+
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
+
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
+
 }
 
 #ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+int k=0;
+k++;
 }
 #endif /* USE_FULL_ASSERT */
