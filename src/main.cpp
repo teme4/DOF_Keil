@@ -28,8 +28,15 @@ extern uint8_t rx1_s[18];
 extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 
+uint8_t pin_ready=9,
+        led_red=11,
+        led_green=10,
+        spi_sck=10,
+        spi_miso=11,
+        spi_mosi=12,
+        spi_nss=15;
 
-uint8_t pin_ready=9,led_red=11,led_green=10;
+
 gpio gpio_stm32f405;
 usart uart_1;
 char buffer[100]; // Буфер для хранения строки
@@ -114,7 +121,7 @@ void ADC_SCAN (void)
 		{
 			dt++;
 		}
-	DATA_ADC[1] = ADC1->DR;
+	DATA_ADC[1] = ADC1->DR;//dacc2dhr
 		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
 		// Temperature
 	ADC1->SQR3 = 2;//7;//1;
@@ -203,20 +210,16 @@ void SystemClock_Config(void)
   LL_RCC_HSI_SetCalibTrimming(16);
   LL_RCC_HSI_Enable();
 
-   /* Wait till HSI is ready */
   while(LL_RCC_HSI_IsReady() != 1)
   {
-
   }
   LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
   LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
   LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
-
-   /* Wait till System clock is ready */
+ 
   while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
   {
-
   }
   LL_Init1msTick(16000000);
   LL_SetSystemCoreClock(16000000);
@@ -356,12 +359,8 @@ static void MX_SPI3_Init(void)
 {
 
    LL_SPI_InitTypeDef SPI_InitStruct = {0};
-
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* Peripheral clock enable */
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
-
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
   /**SPI3 GPIO Configuration
@@ -385,7 +384,6 @@ static void MX_SPI3_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
   LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
 
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
@@ -516,20 +514,21 @@ static void MX_GPIO_Init(void)
 
 int main()
 {
-
 //gpio gpio_stm32f405;
 //UASRT1_gpio PA9 -> Tx  PA10 -> Rx
 gpio_stm32f405.gpio_init(GPIOA,9,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
 gpio_stm32f405.gpio_init(GPIOA,10,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
 gpio_stm32f405.config_af(GPIOA,9,7);//AF7
 gpio_stm32f405.config_af(GPIOA,10,7);//AF7
-//GPIO inpuy/output
-
-gpio_stm32f405.gpio_init(GPIOB,pin_ready,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
-gpio_stm32f405.gpio_init(GPIOB,led_red,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
-gpio_stm32f405.gpio_init(GPIOB,led_green,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_general,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
-//lolka
-
+//GPIO input/output
+gpio_stm32f405.gpio_init(GPIOB,pin_ready,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,led_red,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,led_green,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//SPI_3
+gpio_stm32f405.gpio_init(GPIOC,spi_sck,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOC,spi_mosi,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOC,spi_miso,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,spi_nss,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 uart_1.usart_init();
 
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);

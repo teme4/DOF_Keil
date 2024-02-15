@@ -12,7 +12,7 @@ enum class gpio_pull_up_down //PUDR
 enum class gpio_mode //MODERN
  {
     gpio_mode_input =     0,                
-    gpio_mode_general=    1,                    
+    gpio_mode_output=     1,                    
     gpio_mode_alternate = 2,                  
     gpio_mode_analog =    3                     
 };
