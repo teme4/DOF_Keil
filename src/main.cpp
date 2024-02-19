@@ -199,7 +199,7 @@ void ADC_SCAN (void)
   temp_ext=sqrt(2196200+((1.8639-volt)/0.00000388))-1481.96;
   volt=0;
 }
-/*
+
 void SystemClock_Config(void)
 {
   LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
@@ -223,40 +223,9 @@ void SystemClock_Config(void)
   }
   LL_Init1msTick(16000000);
   LL_SetSystemCoreClock(16000000);
-}*/
-void SystemClock_Config(void)
-{
-  // Установка задержки Flash
-  FLASH->ACR &= ~FLASH_ACR_LATENCY;
-  while ((FLASH->ACR & FLASH_ACR_LATENCY) != 0)
-  {
-  }
-
-  // Включение HSI
-  RCC->CR |= RCC_CR_HSION;
-  while ((RCC->CR & RCC_CR_HSIRDY) == 0)
-  {
-  }
-
-  // Установка предделителей шин
-  RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
-
-  // Установка источника системного тактового сигнала
-  RCC->CFGR &= ~RCC_CFGR_SW;
-  RCC->CFGR |= RCC_CFGR_SW_HSI;
-  while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
-  {
-  }
-
-  // Инициализация SysTick
-  SysTick->LOAD = 16000000 - 1;
-  SysTick->VAL = 0;
-  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
-
-  // Установка SystemCoreClock
-  SystemCoreClock = 16000000;
 }
-/*
+
+
 static void MX_ADC1_Init(void)
 {
 
@@ -266,21 +235,21 @@ static void MX_ADC1_Init(void)
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  
+  /* Peripheral clock enable */
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
 
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-  ADC1 GPIO Configuration
-  // PA0-WKUP   ------> ADC1_IN0
-  // PA1   ------> ADC1_IN1
-  // PA2   ------> ADC1_IN2
-  // PA3   ------> ADC1_IN3
-  // PA6   ------> ADC1_IN6
-  // PA7   ------> ADC1_IN7
-  // PB0   ------> ADC1_IN8
-  // PB1   ------> ADC1_IN9
-
+  /**ADC1 GPIO Configuration
+  PA0-WKUP   ------> ADC1_IN0
+  PA1   ------> ADC1_IN1
+  PA2   ------> ADC1_IN2
+  PA3   ------> ADC1_IN3
+  PA6   ------> ADC1_IN6
+  PA7   ------> ADC1_IN7
+  PB0   ------> ADC1_IN8
+  PB1   ------> ADC1_IN9
+  */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_3|LL_GPIO_PIN_6|LL_GPIO_PIN_7;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
@@ -309,38 +278,9 @@ static void MX_ADC1_Init(void)
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_0);
   LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_0, LL_ADC_SAMPLINGTIME_3CYCLES);
  ADC1->CR2 |= ADC_CR2_ADON; 
-}*/
-
-void MX_ADC1_Init(void)
-{
-  /* Peripheral clock enable */
-  RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-
-  /* GPIO Configuration */
-  GPIOA->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 | GPIO_MODER_MODER3 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7;
-  GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
-
-  /* ADC Configuration */
-  ADC1->CR1 &= ~ADC_CR1_RES;
-  ADC1->CR2 &= ~ADC_CR2_ALIGN;
-  ADC1->CR1 &= ~ADC_CR1_SCAN;
-  ADC1->CR2 &= ~ADC_CR2_CONT;
-  ADC1->CR2 &= ~ADC_CR2_DMA;
-  ADC1->CR2 |= ADC_CR2_EOCS;
-  ADC->CCR &= ~ADC_CCR_MULTI;
-  ADC->CCR |= ADC_CCR_ADCPRE;
-
-  /* ADC Channel Configuration */
-  ADC1->SQR3 &= ~ADC_SQR3_SQ1;
-  ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
-  ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
-
-  /* ADC Enable */
-  ADC1->CR2 |= ADC_CR2_ADON;
 }
-/*
+
+
 static void MX_DAC_Init(void)
 {
   LL_DAC_InitTypeDef DAC_InitStruct = {0};
@@ -348,10 +288,10 @@ static void MX_DAC_Init(void)
 
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_DAC1);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-  // DAC GPIO Configuration
-  // PA4   ------> DAC_OUT1
-  // PA5   ------> DAC_OUT2
-  
+  /**DAC GPIO Configuration
+  PA4   ------> DAC_OUT1
+  PA5   ------> DAC_OUT2
+  */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_4|LL_GPIO_PIN_5;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
@@ -362,55 +302,12 @@ static void MX_DAC_Init(void)
   DAC_InitStruct.OutputBuffer = LL_DAC_OUTPUT_BUFFER_ENABLE;
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_1, &DAC_InitStruct);
 
-
+  /** DAC channel OUT2 config*/
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_2, &DAC_InitStruct);
   DAC -> CR |= (DAC_CR_EN1)|(DAC_CR_EN2);
-}*/
-void MX_DAC_Init(void)
-{
-  /* Peripheral clock enable */
-  RCC->APB1ENR |= RCC_APB1ENR_DACEN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-
-  /* GPIO Configuration */
-  GPIOA->MODER |= GPIO_MODER_MODER4 | GPIO_MODER_MODER5;
-
-  /* DAC Configuration */
-  DAC->CR &= ~DAC_CR_TSEL1;
-  DAC->CR &= ~DAC_CR_WAVE1;
-  DAC->CR |= DAC_CR_BOFF1;
-
-  /* DAC Channel 2 Configuration */
-  DAC->CR &= ~DAC_CR_TSEL2;
-  DAC->CR &= ~DAC_CR_WAVE2;
-  DAC->CR |= DAC_CR_BOFF2;
-
-  /* DAC Enable */
-  DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
 }
 
-void MX_SPI2_Init(void)
-{
-  /* Peripheral clock enable */
-  RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 
-  /* GPIO Configuration */
-  GPIOB->MODER |= GPIO_MODER_MODER12_1 | GPIO_MODER_MODER13_1 | GPIO_MODER_MODER14_1 | GPIO_MODER_MODER15_1;
-  GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR12 | GPIO_OSPEEDER_OSPEEDR13 | GPIO_OSPEEDER_OSPEEDR14 | GPIO_OSPEEDER_OSPEEDR15;
-  GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_12 | GPIO_OTYPER_OT_13 | GPIO_OTYPER_OT_14 | GPIO_OTYPER_OT_15);
-  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR12 | GPIO_PUPDR_PUPDR13 | GPIO_PUPDR_PUPDR14 | GPIO_PUPDR_PUPDR15);
-  GPIOB->AFR[1] |= 0x55550000;
-
-  /* SPI Configuration */
-  SPI2->CR1 = SPI_CR1_MSTR | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_BR_0;
- // SPI2->CR2 = SPI_CR2_FRXTH | SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2; ????
-  SPI2->CRCPR = 10;
-
-  /* SPI Enable */
-  SPI2->CR1 |= SPI_CR1_SPE;
-}
-/*
 static void MX_SPI2_Init(void)
 {
   LL_SPI_InitTypeDef SPI_InitStruct = {0};
@@ -418,11 +315,11 @@ static void MX_SPI2_Init(void)
 
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI2);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-  // SPI2 GPIO Configuration
-  // PB12   ------> SPI2_NSS
-  // PB13   ------> SPI2_SCK
-  // PB14   ------> SPI2_MISO
-  // PB15   ------> SPI2_MOSI
+  /**SPI2 GPIO Configuration
+  PB12   ------> SPI2_NSS
+  PB13   ------> SPI2_SCK
+  PB14   ------> SPI2_MISO
+  PB15   ------> SPI2_MOSI*/
   GPIO_InitStruct.Pin = LL_GPIO_PIN_12|LL_GPIO_PIN_13|LL_GPIO_PIN_14|LL_GPIO_PIN_15;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
@@ -443,7 +340,7 @@ static void MX_SPI2_Init(void)
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI2, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
-  }*/
+  }
 
 static void MX_SPI3_Init(void)
 {
@@ -488,7 +385,7 @@ static void MX_SPI3_Init(void)
   LL_SPI_Init(SPI3, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
 }
-/*
+
 static void MX_TIM14_Init(void)
 {
 
@@ -519,28 +416,6 @@ static void MX_TIM14_Init(void)
 		TIM14->CR1=0x81;
     TIM14->PSC=0x8000;	// 0x0400
 	  TIM14->DIER=0x0001;
-}*/
-void MX_TIM14_Init(void)
-{
-  /* Peripheral clock enable */
-  RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
-
-  /* NVIC Configuration */
-  NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
-
-  /* TIM Configuration */
-  TIM14->PSC = 0x0008;
-  TIM14->ARR = 0x1000;
-  TIM14->CR1 |= TIM_CR1_ARPE;
-  TIM14->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_0;
-  TIM14->CCER &= ~TIM_CCER_CC1E;
-  TIM14->CCR1 = 0;
-  TIM14->CCER &= ~TIM_CCER_CC1P;
-  TIM14->BDTR |= TIM_BDTR_MOE;
-
-  /* TIM Enable */
-  TIM14->CR1 |= TIM_CR1_CEN;
 }
 
 static void MX_GPIO_Init(void)
@@ -646,14 +521,9 @@ uart_1.usart_init();
 	rx0[6]=1;//2;//4   2 1 2 mag- 3/190 gib- 2/137
 	rx0[7]=52;//170;  //158 145 169 144 148 164 132 168 138
 	rx0[8]=0;	//128
-
-
-/*LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);*/
-
-  DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
-  DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
-
+	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
+	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
+	//LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, rx0[3]+256*rx0[2]);	
   LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
 	//	LL_SPI_Enable(SPI2);
