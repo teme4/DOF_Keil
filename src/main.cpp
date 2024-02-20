@@ -13,7 +13,9 @@ std::vector<char> TxData; // Вектор целых чисел
 
 
 uint16_t ctr=0,dt=0;
-unsigned short DATA_ADC[4];
+unsigned short DATA_ADC[10];
+double vol_arr_temp[10];
+double vol_arr[10];
 unsigned int DATA_ADCacc;
 volatile unsigned int DATA_ADCaccout;
 unsigned int DATA_ADCacc1;
@@ -34,15 +36,31 @@ uint8_t pin_ready=9,
         spi_sck=10,
         spi_miso=11,
         spi_mosi=12,
-        spi_nss=15;
+        spi_nss=15,
+        pin_dac_1=4,
+        pin_adc_0=0,
+        pin_adc_1=1,
+        pin_adc_2=2,
+        pin_adc_3=3,
+        pin_adc_4=4,
+        pin_adc_5=5,
+        pin_adc_6=6,
+        pin_adc_7=7,
+        pin_adc_8=0,
+        pin_adc_9=1;
 
 
 gpio gpio_stm32f405;
 usart uart_1;
 char buffer[100]; // Буфер для хранения строки
 double volt=0;
-double temp_int=0,temp_ext=0;
+double temp_int=0,temp_ext=0,temp_rad=0;
 
+
+double _TransferFunction(double voltage)
+            {
+            return (-1481.96 + sqrt((2.1962 * pow(10, 6)) + (1.8639 - voltage) / (3.88 * pow(10, -6))));
+            }
 
 
 
@@ -60,7 +78,7 @@ void ADC_SCAN (void);
 
 void delay_ms(uint32_t us)
 {
-    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN; 
+    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
     TIM8->PSC = 0; // Настройка предделителя
     TIM8->ARR = 8000-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
     TIM8->CNT = 0; // Сброс счетчика
@@ -76,7 +94,7 @@ void delay_ms(uint32_t us)
 
 void delay_us(uint32_t us)
 {
-    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN; 
+    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
     TIM8->PSC = 0; // Настройка предделителя
     TIM8->ARR = 80-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
     TIM8->CNT = 0; // Сброс счетчика
@@ -97,32 +115,55 @@ void ADC_SCAN (void)
 	DATA_ADCacc1=0;
 	DATA_ADCacc2=0;
 	DATA_ADCacc3=0;
-	while (ctr<1024)
-	{
+  int val_avg=100;
+  for(int z=0;z<10;z++)
+  {
+   vol_arr_temp[z]=0;
+  }
+
+
+   for(int i=0;i<val_avg;i++)
+        {
+    for(int j=0;j<10;j++)
+        {
+          ADC1->SQR3 = j;
+          ADC1->CR2 |= ADC_CR2_SWSTART;
+          while(!(ADC1->SR & ADC_SR_EOC)){}
+          vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
+        }
+        }
+        for(int i=0;i<10;i++)
+        {
+          vol_arr[i]=vol_arr_temp[i]/val_avg;
+        }
+
+/*
 		// Temperature
-	ADC1->SQR3 = 0;//2;
+	ADC1->SQR3 = 0;
 	ADC1->CR2 |= ADC_CR2_SWSTART;
-//		gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+
 		dt=0;
 		while (dt<100)
 		{
 			dt++;
 		}
+
 	DATA_ADC[0] = ADC1->DR;
-		DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
+	DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
+
 		// Bias1
 	ADC1->SQR3 = 1;//3;//0;
 	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+
 		dt=0;
 		while (dt<100)
 		{
 			dt++;
 		}
+
 	DATA_ADC[1] = ADC1->DR;//dacc2dhr
 		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
+
 		// Temperature
 	ADC1->SQR3 = 2;//7;//1;
 	ADC1->CR2 |= ADC_CR2_SWSTART;
@@ -146,25 +187,25 @@ void ADC_SCAN (void)
 			dt++;
 		}
 	DATA_ADC[3] = ADC1->DR;
-		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	
-		ctr++;
-	}
+		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	*/
+	// 	ctr++;
+	// }
 	DATA_ADCaccout=DATA_ADCacc/512;
 	DATA_ADCaccout1=DATA_ADCacc1/512;
 	DATA_ADCaccout2=DATA_ADCacc2/512;
 	DATA_ADCaccout3=DATA_ADCacc3/512;
 	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
 	{
-  gpio_stm32f405.set_pin_state(GPIOB,led_red,1); 
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,1);
   gpio_stm32f405.set_pin_state(GPIOB,pin_ready,0);
   gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
 	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
+	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
 	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 	else
 	{
-  gpio_stm32f405.set_pin_state(GPIOB,led_red,0); 
+  gpio_stm32f405.set_pin_state(GPIOB,led_red,0);
   gpio_stm32f405.set_pin_state(GPIOB,pin_ready,1);
   gpio_stm32f405.set_pin_state(GPIOB,led_green,1);
 	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
@@ -192,14 +233,12 @@ void ADC_SCAN (void)
 //	while (!(ADC1->SR & ADC_SR_EOC)) ;
 //	DATA_ADC[6] = ADC1->DR;
 	
-  volt=DATA_ADC[2]*(3.3/4096);
-  temp_int=sqrt(2196200+((1.8639-volt)/0.00000388))-1481.96;
-  //ext temp
-  volt=DATA_ADC[3]*(3.3/4096);
-  temp_ext=sqrt(2196200+((1.8639-volt)/0.00000388))-1481.96;
+  temp_int=_TransferFunction(vol_arr[2]);
+  temp_ext=_TransferFunction(vol_arr[6]*2);
+  temp_rad=_TransferFunction(vol_arr[9]);
   volt=0;
 }
-
+/*
 void SystemClock_Config(void)
 {
   LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
@@ -223,9 +262,40 @@ void SystemClock_Config(void)
   }
   LL_Init1msTick(16000000);
   LL_SetSystemCoreClock(16000000);
+}*/
+void SystemClock_Config(void)
+{
+  // Установка задержки Flash
+  FLASH->ACR &= ~FLASH_ACR_LATENCY;
+  while ((FLASH->ACR & FLASH_ACR_LATENCY) != 0)
+  {
+  }
+
+  // Включение HSI
+  RCC->CR |= RCC_CR_HSION;
+  while ((RCC->CR & RCC_CR_HSIRDY) == 0)
+  {
+  }
+
+  // Установка предделителей шин
+  RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+
+  // Установка источника системного тактового сигнала
+  RCC->CFGR &= ~RCC_CFGR_SW;
+  RCC->CFGR |= RCC_CFGR_SW_HSI;
+  while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
+  {
+  }
+
+  // Инициализация SysTick
+  SysTick->LOAD = 16000000 - 1;
+  SysTick->VAL = 0;
+  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+
+  // Установка SystemCoreClock
+  SystemCoreClock = 16000000;
 }
-
-
+/*
 static void MX_ADC1_Init(void)
 {
 
@@ -235,21 +305,21 @@ static void MX_ADC1_Init(void)
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* Peripheral clock enable */
+  
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
 
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-  /**ADC1 GPIO Configuration
-  PA0-WKUP   ------> ADC1_IN0
-  PA1   ------> ADC1_IN1
-  PA2   ------> ADC1_IN2
-  PA3   ------> ADC1_IN3
-  PA6   ------> ADC1_IN6
-  PA7   ------> ADC1_IN7
-  PB0   ------> ADC1_IN8
-  PB1   ------> ADC1_IN9
-  */
+  ADC1 GPIO Configuration
+  // PA0-WKUP   ------> ADC1_IN0
+  // PA1   ------> ADC1_IN1
+  // PA2   ------> ADC1_IN2
+  // PA3   ------> ADC1_IN3
+  // PA6   ------> ADC1_IN6
+  // PA7   ------> ADC1_IN7
+  // PB0   ------> ADC1_IN8
+  // PB1   ------> ADC1_IN9
+
   GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_3|LL_GPIO_PIN_6|LL_GPIO_PIN_7;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
@@ -278,9 +348,38 @@ static void MX_ADC1_Init(void)
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_0);
   LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_0, LL_ADC_SAMPLINGTIME_3CYCLES);
  ADC1->CR2 |= ADC_CR2_ADON; 
+}*/
+
+void MX_ADC1_Init(void)
+{
+  /* Peripheral clock enable */
+  RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+  //RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+ // RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+
+  /* GPIO Configuration */
+ // GPIOA->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 | GPIO_MODER_MODER3 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7;
+ //GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
+
+  /* ADC Configuration */
+  ADC1->CR1 &= ~ADC_CR1_RES;
+  ADC1->CR2 &= ~ADC_CR2_ALIGN;
+  ADC1->CR1 &= ~ADC_CR1_SCAN;
+  ADC1->CR2 &= ~ADC_CR2_CONT;
+  ADC1->CR2 &= ~ADC_CR2_DMA;
+  ADC1->CR2 |= ADC_CR2_EOCS;
+  ADC->CCR &= ~ADC_CCR_MULTI;
+  ADC->CCR |= ADC_CCR_ADCPRE;
+
+  /* ADC Channel Configuration */
+  ADC1->SQR3 &= ~ADC_SQR3_SQ1;
+  ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
+  ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
+
+  /* ADC Enable */
+  ADC1->CR2 |= ADC_CR2_ADON;
 }
-
-
+/*
 static void MX_DAC_Init(void)
 {
   LL_DAC_InitTypeDef DAC_InitStruct = {0};
@@ -288,10 +387,10 @@ static void MX_DAC_Init(void)
 
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_DAC1);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-  /**DAC GPIO Configuration
-  PA4   ------> DAC_OUT1
-  PA5   ------> DAC_OUT2
-  */
+  // DAC GPIO Configuration
+  // PA4   ------> DAC_OUT1
+  // PA5   ------> DAC_OUT2
+  
   GPIO_InitStruct.Pin = LL_GPIO_PIN_4|LL_GPIO_PIN_5;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
@@ -302,12 +401,55 @@ static void MX_DAC_Init(void)
   DAC_InitStruct.OutputBuffer = LL_DAC_OUTPUT_BUFFER_ENABLE;
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_1, &DAC_InitStruct);
 
-  /** DAC channel OUT2 config*/
+
   LL_DAC_Init(DAC, LL_DAC_CHANNEL_2, &DAC_InitStruct);
   DAC -> CR |= (DAC_CR_EN1)|(DAC_CR_EN2);
+}*/
+void MX_DAC_Init(void)
+{
+  /* Peripheral clock enable */
+  RCC->APB1ENR |= RCC_APB1ENR_DACEN;
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+  /* GPIO Configuration */
+  //GPIOA->MODER |= GPIO_MODER_MODER4 | GPIO_MODER_MODER5;
+
+  /* DAC Configuration */
+  DAC->CR &= ~DAC_CR_TSEL1;
+  DAC->CR &= ~DAC_CR_WAVE1;
+  DAC->CR |= DAC_CR_BOFF1;
+
+  /* DAC Channel 2 Configuration */
+  DAC->CR &= ~DAC_CR_TSEL2;
+  DAC->CR &= ~DAC_CR_WAVE2;
+  DAC->CR |= DAC_CR_BOFF2;
+
+  /* DAC Enable */
+  DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
 }
 
+void MX_SPI2_Init(void)
+{
+  /* Peripheral clock enable */
+  RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 
+  /* GPIO Configuration */
+  GPIOB->MODER |= GPIO_MODER_MODER12_1 | GPIO_MODER_MODER13_1 | GPIO_MODER_MODER14_1 | GPIO_MODER_MODER15_1;
+  GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR12 | GPIO_OSPEEDER_OSPEEDR13 | GPIO_OSPEEDER_OSPEEDR14 | GPIO_OSPEEDER_OSPEEDR15;
+  GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_12 | GPIO_OTYPER_OT_13 | GPIO_OTYPER_OT_14 | GPIO_OTYPER_OT_15);
+  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR12 | GPIO_PUPDR_PUPDR13 | GPIO_PUPDR_PUPDR14 | GPIO_PUPDR_PUPDR15);
+  GPIOB->AFR[1] |= 0x55550000;
+
+  /* SPI Configuration */
+  SPI2->CR1 = SPI_CR1_MSTR | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_BR_0;
+ // SPI2->CR2 = SPI_CR2_FRXTH | SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2; ????
+  SPI2->CRCPR = 10;
+
+  /* SPI Enable */
+  SPI2->CR1 |= SPI_CR1_SPE;
+}
+/*
 static void MX_SPI2_Init(void)
 {
   LL_SPI_InitTypeDef SPI_InitStruct = {0};
@@ -315,11 +457,11 @@ static void MX_SPI2_Init(void)
 
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI2);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-  /**SPI2 GPIO Configuration
-  PB12   ------> SPI2_NSS
-  PB13   ------> SPI2_SCK
-  PB14   ------> SPI2_MISO
-  PB15   ------> SPI2_MOSI*/
+  // SPI2 GPIO Configuration
+  // PB12   ------> SPI2_NSS
+  // PB13   ------> SPI2_SCK
+  // PB14   ------> SPI2_MISO
+  // PB15   ------> SPI2_MOSI
   GPIO_InitStruct.Pin = LL_GPIO_PIN_12|LL_GPIO_PIN_13|LL_GPIO_PIN_14|LL_GPIO_PIN_15;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
@@ -340,7 +482,7 @@ static void MX_SPI2_Init(void)
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI2, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
-  }
+  }*/
 
 static void MX_SPI3_Init(void)
 {
@@ -385,7 +527,7 @@ static void MX_SPI3_Init(void)
   LL_SPI_Init(SPI3, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
 }
-
+/*
 static void MX_TIM14_Init(void)
 {
 
@@ -416,7 +558,35 @@ static void MX_TIM14_Init(void)
 		TIM14->CR1=0x81;
     TIM14->PSC=0x8000;	// 0x0400
 	  TIM14->DIER=0x0001;
+}*/
+void MX_TIM14_Init(void)
+{
+  RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+  NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
+
+  TIM14->PSC = 0x0008;
+  TIM14->ARR = 0x1000;
+  TIM14->CR1 |= TIM_CR1_ARPE;
+  TIM14->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_0;
+  TIM14->CCER &= ~TIM_CCER_CC1E;
+  TIM14->CCR1 = 0;
+  TIM14->CCER &= ~TIM_CCER_CC1P;
+  TIM14->BDTR |= TIM_BDTR_MOE;
+  TIM14->CR1 |= TIM_CR1_CEN;
 }
+
+void MX_TIM3_Init(void)
+{
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3 clock
+    TIM3->PSC = 16 - 1; // Set prescaler to 16 (SystemCoreClock = 16MHz)
+    TIM3->ARR = 20000 - 1; // Set auto-reload to 10
+    TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
+    TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
+    TIM3->CCR3 = 100; // Set the duty cycle to 50%
+    TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
+}
+
 
 static void MX_GPIO_Init(void)
 {
@@ -480,6 +650,24 @@ static void MX_GPIO_Init(void)
 
 int main()
 {
+
+
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
+  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
+
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_ADC1_Init();
+  MX_DAC_Init();
+  MX_SPI2_Init();
+ //MX_SPI3_Init();
+  MX_TIM14_Init();
+  MX_TIM3_Init();
+LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
+  
+
 //gpio gpio_stm32f405;
 //UASRT1_gpio PA9 -> Tx  PA10 -> Rx
 gpio_stm32f405.gpio_init(GPIOA,9,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
@@ -495,21 +683,31 @@ gpio_stm32f405.gpio_init(GPIOC,spi_sck,gpio_type::gpio_type_pp,gpio_mode::gpio_m
 gpio_stm32f405.gpio_init(GPIOC,spi_mosi,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOC,spi_miso,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,spi_nss,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//ADC
+gpio_stm32f405.gpio_init(GPIOA,pin_dac_1,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_0,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_1,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_2,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_3,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_4,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_5,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_6,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_adc_7,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,pin_adc_8,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,pin_adc_9,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//gpio_stm32f405.gpio_init(GPIOB,pin_adc,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//PWM
+//gpio_stm32f405.gpio_init(GPIOA,2,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//gpio_stm32f405.config_af(GPIOA,2,1);//AF0
+gpio_stm32f405.gpio_init(GPIOB,0,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.config_af(GPIOB,0,2);//AF1
+
+
 uart_1.usart_init();
 
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
-  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
 
-  SystemClock_Config();
-  MX_GPIO_Init();
-  MX_ADC1_Init();
-  MX_DAC_Init();
-  MX_SPI2_Init();
-  MX_SPI3_Init();
-  MX_TIM14_Init();
-	LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
+
+
 
 	rx1[4]=32;
 	rx0[0]=170;
@@ -521,9 +719,14 @@ uart_1.usart_init();
 	rx0[6]=1;//2;//4   2 1 2 mag- 3/190 gib- 2/137
 	rx0[7]=52;//170;  //158 145 169 144 148 164 132 168 138
 	rx0[8]=0;	//128
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
-	//LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, rx0[3]+256*rx0[2]);	
+
+
+/*LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
+	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);*/
+
+  DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
+  DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
+
   LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
 	//	LL_SPI_Enable(SPI2);
