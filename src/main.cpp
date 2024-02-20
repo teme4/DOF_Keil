@@ -236,7 +236,10 @@ void ADC_SCAN (void)
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]);
-  volt=0;
+   /* sprintf(buffer, "%f", temp_int);
+    uart_1.uart_tx_data(buffer);
+    uart_1.uart_tx_data("/");
+  volt=0;*/
 }
 /*
 void SystemClock_Config(void)
@@ -580,13 +583,27 @@ void MX_TIM3_Init(void)
 {
     RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3 clock
     TIM3->PSC = 16 - 1; // Set prescaler to 16 (SystemCoreClock = 16MHz)
-    TIM3->ARR = 20000 - 1; // Set auto-reload to 10
+    TIM3->ARR = 50000 - 1; // Set auto-reload to 10
     TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
     TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
-    TIM3->CCR3 = 100; // Set the duty cycle to 50%
+    TIM3->CCR3 = 44000; // Set the duty cycle to 50%
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
+
+double PID,temp_val,temp_current,current_error,last_error,
+kp=1,ki,kd,P,I,D;
+double interval=5;
+
+void pid()
+{
+temp_val=temp_int;
+P=temp_val-temp_current;
+I+=P*interval;
+D=(P-last_error)/interval;
+last_error=P;
+PID=(kp*P+ki*I+kd*D);
+}
 
 static void MX_GPIO_Init(void)
 {
@@ -739,10 +756,11 @@ uart_1.uart_tx_data("BreakPoint_1");
 
   while (1)
   {
-
 ADC_SCAN ();
-
-		rx1_s[0]=rx1[0];
+ //pid();
+   /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
+                uart_1.uart_tx_data(buffer);*/
+		/*rx1_s[0]=rx1[0];
 		if ((DATA_ADCaccout2<=7000)&&(DATA_ADCaccout2>=3000))
 		{
 		rx1_s[1]=temp[DATA_ADCaccout2/2-1500]>>8;//DATA_ADCaccout2>>8;
@@ -772,7 +790,7 @@ ADC_SCAN ();
 		rx1_s[10]=1;
 		rx1_s[11]=10;
 		rx1_s[12]=1;
-		rx1_s[13]=0;
+		rx1_s[13]=0;*/
   }
 }
 
