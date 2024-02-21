@@ -52,7 +52,7 @@ uint8_t pin_ready=9,
 
 gpio gpio_stm32f405;
 usart uart_1;
-char buffer[100]; // Буфер для хранения строки
+char buffer[100];
 double volt=0;
 double temp_int=0,temp_ext=0,temp_rad=0;
 
@@ -236,10 +236,21 @@ void ADC_SCAN (void)
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]);
-   /* sprintf(buffer, "%f", temp_int);
-    uart_1.uart_tx_data(buffer);
-    uart_1.uart_tx_data("/");
-  volt=0;*/
+  double t;
+  int a,b;
+  a=temp_int;
+t=temp_int*1000-a;
+  b=t;
+ /* sprintf(buffer, "%.15f\n", a);
+   sprintf(buffer, "%f", temp_int);
+    uart_1.uart_tx_data(buffer);*/
+   // uart_1.uart_tx_data("/");
+sprintf(buffer, ">temp_int:%-8.2f\n",temp_int);
+//sprintf(buffer, ">temp_ext:%f\n",0);
+//sprintf(buffer, "%f\n",temp_int);
+
+ uart_1.uart_tx_data(buffer);
+  volt=0;
 }
 /*
 void SystemClock_Config(void)
@@ -586,7 +597,7 @@ void MX_TIM3_Init(void)
     TIM3->ARR = 50000 - 1; // Set auto-reload to 10
     TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
     TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
-    TIM3->CCR3 = 44000; // Set the duty cycle to 50%
+    TIM3->CCR3 =27000;// 44000; // Set the duty cycle to 50%
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
