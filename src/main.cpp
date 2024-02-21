@@ -115,7 +115,7 @@ void ADC_SCAN (void)
 	DATA_ADCacc1=0;
 	DATA_ADCacc2=0;
 	DATA_ADCacc3=0;
-  int val_avg=100;
+  int val_avg=10;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
@@ -236,21 +236,9 @@ void ADC_SCAN (void)
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]);
-  double t;
-  int a,b;
-  a=temp_int;
-t=temp_int*1000-a;
-  b=t;
- /* sprintf(buffer, "%.15f\n", a);
-   sprintf(buffer, "%f", temp_int);
-    uart_1.uart_tx_data(buffer);*/
-   // uart_1.uart_tx_data("/");
-sprintf(buffer, ">temp_int:%-8.2f\n",temp_int);
-//sprintf(buffer, ">temp_ext:%f\n",0);
-//sprintf(buffer, "%f\n",temp_int);
 
+sprintf(buffer, ">temp_int:%-8.2f\n",temp_int);
  uart_1.uart_tx_data(buffer);
-  volt=0;
 }
 /*
 void SystemClock_Config(void)
@@ -441,6 +429,38 @@ void MX_DAC_Init(void)
   /* DAC Enable */
   DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
 }
+#define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
+#define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
+#define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
+
+void sys_delay_us(uint32_t us)
+{
+   int32_t us_count_tick =  us * (16000000/1000000);
+   //разрешаем использовать счётчик
+   SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+   //обнуляем значение счётного регистра
+   DWT_CYCCNT  = 0;
+   //запускаем счётчик
+   DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
+   while(DWT_CYCCNT < us_count_tick);
+   //останавливаем счётчик
+   DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+}
+
+void sys_delay_ms(uint32_t ms)
+{
+   int32_t ms_count_tick =  ms * (16000000/1000);
+   //разрешаем использовать счётчик
+   SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+   //обнуляем значение счётного регистра
+   DWT_CYCCNT  = 0;
+   //запускаем счётчик
+   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+   while(DWT_CYCCNT < ms_count_tick);
+   //останавливаем счётчик
+   DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+}
+
 
 void MX_SPI2_Init(void)
 {
@@ -602,18 +622,40 @@ void MX_TIM3_Init(void)
 }
 
 
-double PID,temp_val,temp_current,current_error,last_error,
-kp=1,ki,kd,P,I,D;
+double PID,temp_current,temp_delta,temp_last,current_error,last_error,
+kp=27000,
+ki=0,
+kd=0,
+P,I,D;
 double interval=5;
+uint32_t val,pwm,reg_max=27000,reg_min,time=0;
 
-void pid()
+void pid(double set_temp)
 {
-temp_val=temp_int;
-P=temp_val-temp_current;
-I+=P*interval;
-D=(P-last_error)/interval;
-last_error=P;
-PID=(kp*P+ki*I+kd*D);
+temp_current=temp_int;
+temp_delta=temp_current-set_temp;
+DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+time=DWT_CYCCNT/1000;
+sprintf(buffer, ">time_of_one_cycle:%d\n",time);
+ uart_1.uart_tx_data(buffer);
+sprintf(buffer, ">temp_delta:%-8.2f\n",temp_delta);
+ uart_1.uart_tx_data(buffer);
+sprintf(buffer, ">set:%d\n",-30);
+ uart_1.uart_tx_data(buffer);
+
+
+ pwm=temp_delta*kp+temp_delta*time*0.1;
+
+ if(pwm<reg_min)
+  pwm =reg_min;
+ 
+ if(pwm>reg_max)
+  pwm =reg_max;
+ 
+ TIM3->CCR3 =pwm;
+ double _pwm=pwm/100;
+sprintf(buffer, ">PWM:%d\n",pwm);
+ uart_1.uart_tx_data(buffer);
 }
 
 static void MX_GPIO_Init(void)
@@ -759,16 +801,20 @@ uart_1.usart_init();
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
 	//	LL_SPI_Enable(SPI2);
 
-
+/*
 uart_1.uart_tx_data("Start Programm");
 uart_1.uart_tx_data("BreakPoint_1");
-
+*/
 //USART1->DR=myString;
+
 
   while (1)
   {
+     DWT_CYCCNT  = 0;
+   //запускаем счётчик
+   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- //pid();
+ pid(-30);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
 		/*rx1_s[0]=rx1[0];
