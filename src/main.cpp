@@ -623,7 +623,7 @@ void MX_TIM3_Init(void)
 
 
 double PID,temp_current,temp_delta,temp_last,current_error,last_error,
-kp=27000,
+kp=26000,
 ki=0,
 kd=0,
 P,I,D;
@@ -640,7 +640,7 @@ sprintf(buffer, ">time_of_one_cycle:%d\n",time);
  uart_1.uart_tx_data(buffer);
 sprintf(buffer, ">temp_delta:%-8.2f\n",temp_delta);
  uart_1.uart_tx_data(buffer);
-sprintf(buffer, ">set:%d\n",-30);
+sprintf(buffer, ">set:%f\n",set_temp);
  uart_1.uart_tx_data(buffer);
 
 
@@ -814,7 +814,7 @@ uart_1.uart_tx_data("BreakPoint_1");
    //запускаем счётчик
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- pid(-30);
+ pid(-20);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
 		/*rx1_s[0]=rx1[0];
