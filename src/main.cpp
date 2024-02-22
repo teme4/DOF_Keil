@@ -1,6 +1,11 @@
 #include "main.hpp"
+
 #include "gpio.hpp"
 #include "usart.hpp"
+#include "delay.hpp"
+#include "pid.hpp"
+
+
 #include <string>
 #include <vector>
 #include "math.h"
@@ -29,6 +34,9 @@ extern uint8_t rx1[18];
 extern uint8_t rx1_s[18];
 extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
+char buffer2[100];
+
+
 
 uint8_t pin_ready=9,
         led_red=11,
@@ -52,7 +60,8 @@ uint8_t pin_ready=9,
 
 gpio gpio_stm32f405;
 usart uart_1;
-char buffer[100];
+pid pid_int;
+
 double volt=0;
 double temp_int=0,temp_ext=0,temp_rad=0;
 
@@ -71,7 +80,7 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_DAC_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_SPI3_Init(void);
+//static void MX_SPI3_Init(void);
 static void MX_TIM14_Init(void);
 
 void ADC_SCAN (void);
@@ -237,8 +246,8 @@ void ADC_SCAN (void)
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]);
 
-sprintf(buffer, ">temp_int:%-8.2f\n",temp_int);
- uart_1.uart_tx_data(buffer);
+sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
+ uart_1.uart_tx_data(buffer2);
 }
 /*
 void SystemClock_Config(void)
@@ -429,37 +438,37 @@ void MX_DAC_Init(void)
   /* DAC Enable */
   DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
 }
-#define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
-#define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
-#define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
+// #define    DWT_CYCCNT    *(volatile unsigned long *)0xE0001004
+// #define    DWT_CONTROL   *(volatile unsigned long *)0xE0001000
+// #define    SCB_DEMCR     *(volatile unsigned long *)0xE000EDFC
 
-void sys_delay_us(uint32_t us)
-{
-   int32_t us_count_tick =  us * (16000000/1000000);
-   //разрешаем использовать счётчик
-   SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-   //обнуляем значение счётного регистра
-   DWT_CYCCNT  = 0;
-   //запускаем счётчик
-   DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
-   while(DWT_CYCCNT < us_count_tick);
-   //останавливаем счётчик
-   DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
-}
+// void sys_delay_us(uint32_t us)
+// {
+//    int32_t us_count_tick =  us * (16000000/1000000);
+//    //разрешаем использовать счётчик
+//    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+//    //обнуляем значение счётного регистра
+//    DWT_CYCCNT  = 0;
+//    //запускаем счётчик
+//    DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
+//    while(DWT_CYCCNT < us_count_tick);
+//    //останавливаем счётчик
+//    DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+// }
 
-void sys_delay_ms(uint32_t ms)
-{
-   int32_t ms_count_tick =  ms * (16000000/1000);
-   //разрешаем использовать счётчик
-   SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-   //обнуляем значение счётного регистра
-   DWT_CYCCNT  = 0;
-   //запускаем счётчик
-   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
-   while(DWT_CYCCNT < ms_count_tick);
-   //останавливаем счётчик
-   DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
-}
+// void sys_delay_ms(uint32_t ms)
+// {
+//    int32_t ms_count_tick =  ms * (16000000/1000);
+//    //разрешаем использовать счётчик
+//    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+//    //обнуляем значение счётного регистра
+//    DWT_CYCCNT  = 0;
+//    //запускаем счётчик
+//    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+//    while(DWT_CYCCNT < ms_count_tick);
+//    //останавливаем счётчик
+//    DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+// }
 
 
 void MX_SPI2_Init(void)
@@ -518,49 +527,49 @@ static void MX_SPI2_Init(void)
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
   }*/
 
-static void MX_SPI3_Init(void)
-{
+// static void MX_SPI3_Init(void)
+// {
 
-  LL_SPI_InitTypeDef SPI_InitStruct = {0};
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-  /**SPI3 GPIO Configuration
-  PA15   ------> SPI3_NSS
-  PC10   ------> SPI3_SCK
-  PC11   ------> SPI3_MISO
-  PC12   ------> SPI3_MOSI
-  */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
-  GPIO_InitStruct.Mode = 1;//LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+//   LL_SPI_InitTypeDef SPI_InitStruct = {0};
+//   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+//   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
+//   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+//   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+//   /**SPI3 GPIO Configuration
+//   PA15   ------> SPI3_NSS
+//   PC10   ------> SPI3_SCK
+//   PC11   ------> SPI3_MISO
+//   PC12   ------> SPI3_MOSI
+//   */
+//   GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+//   GPIO_InitStruct.Mode = 1;//LL_GPIO_MODE_ALTERNATE;
+//   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+//   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+//   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+//   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
+//   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_12;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+//   GPIO_InitStruct.Pin = LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_12;
+//   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+//   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+//   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+//   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+//   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
+//   LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;//LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
-  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
-  SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;//LL_SPI_MSB_FIRST;
-  SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStruct.CRCPoly = 10;
-  LL_SPI_Init(SPI3, &SPI_InitStruct);
-  LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
-}
+//   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
+//   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
+//   SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;//LL_SPI_DATAWIDTH_8BIT;
+//   SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
+//   SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
+//   SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
+//   SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+//   SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;//LL_SPI_MSB_FIRST;
+//   SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+//   SPI_InitStruct.CRCPoly = 10;
+//   LL_SPI_Init(SPI3, &SPI_InitStruct);
+//   LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
+// }
 /*
 static void MX_TIM14_Init(void)
 {
@@ -621,42 +630,6 @@ void MX_TIM3_Init(void)
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
-
-double PID,temp_current,temp_delta,temp_last,current_error,last_error,
-kp=26000,
-ki=0,
-kd=0,
-P,I,D;
-double interval=5;
-uint32_t val,pwm,reg_max=27000,reg_min,time=0;
-
-void pid(double set_temp)
-{
-temp_current=temp_int;
-temp_delta=temp_current-set_temp;
-DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
-time=DWT_CYCCNT/1000;
-sprintf(buffer, ">time_of_one_cycle:%d\n",time);
- uart_1.uart_tx_data(buffer);
-sprintf(buffer, ">temp_delta:%-8.2f\n",temp_delta);
- uart_1.uart_tx_data(buffer);
-sprintf(buffer, ">set:%f\n",set_temp);
- uart_1.uart_tx_data(buffer);
-
-
- pwm=temp_delta*kp+temp_delta*time*0.1;
-
- if(pwm<reg_min)
-  pwm =reg_min;
- 
- if(pwm>reg_max)
-  pwm =reg_max;
- 
- TIM3->CCR3 =pwm;
- double _pwm=pwm/100;
-sprintf(buffer, ">PWM:%d\n",pwm);
- uart_1.uart_tx_data(buffer);
-}
 
 static void MX_GPIO_Init(void)
 {
@@ -776,9 +749,6 @@ gpio_stm32f405.config_af(GPIOB,0,2);//AF1
 uart_1.usart_init();
 
 
-
-
-
 	rx1[4]=32;
 	rx0[0]=170;
 	rx0[1]=60;
@@ -814,7 +784,7 @@ uart_1.uart_tx_data("BreakPoint_1");
    //запускаем счётчик
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- pid(-20);
+ pid_int.start(-30);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
 		/*rx1_s[0]=rx1[0];
@@ -870,14 +840,14 @@ ADC_SCAN ();
              char value_T='T';
              if(USART1->DR==value_T)
              {
-                sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
+                /*sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);
                 sprintf(buffer, "DATA_ADC[1]: %d", DATA_ADC[1]);
                 uart_1.uart_tx_data(buffer);
                 sprintf(buffer, "DATA_ADC[2]: %d", DATA_ADC[2]);
                 uart_1.uart_tx_data(buffer);
                 sprintf(buffer, "DATA_ADC[3]: %d", DATA_ADC[3]);
-                uart_1.uart_tx_data(buffer);
+                uart_1.uart_tx_data(buffer);*/
              }
     }
 }
