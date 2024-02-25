@@ -16,7 +16,7 @@ uint8_t len=0;
      *********************************************************************************/
       uint16_t usart::GetBBRsettings(uint32_t ClokFreq,float baurd_rate)
       {
-        double UsarDiv=static_cast<double>(ClokFreq)/(baurd_rate);
+        float UsarDiv=static_cast<float>(ClokFreq)/(baurd_rate);
         return roundf(UsarDiv);
       }
 

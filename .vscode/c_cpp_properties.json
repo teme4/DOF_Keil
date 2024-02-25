@@ -8,13 +8,13 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "c:/Users/teme4/Documents/DOF_Keil/include",
-                "c:/Users/teme4/Documents/DOF_Keil/src",
-                "c:/Users/teme4/Documents/DOF_Keil/include/Core",
-                "c:/Users/teme4/Documents/DOF_Keil/include/Core/Inc",
-                "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/STM32F4xx_HAL_Driver/Inc",
-                "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS",
-                "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS/Include",
+                "C:/Users/teme4/Documents/DOF_Keil/include",
+                "C:/Users/teme4/Documents/DOF_Keil/src",
+                "C:/Users/teme4/Documents/DOF_Keil/include/Core",
+                "C:/Users/teme4/Documents/DOF_Keil/include/Core/Inc",
+                "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS",
+                "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS/Include",
                 "C:/Users/teme4/.platformio/packages/framework-cmsis/CMSIS/Include",
                 "C:/Users/teme4/.platformio/packages/framework-cmsis-stm32f4/Include",
                 ""
@@ -22,13 +22,13 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "c:/Users/teme4/Documents/DOF_Keil/include",
-                    "c:/Users/teme4/Documents/DOF_Keil/src",
-                    "c:/Users/teme4/Documents/DOF_Keil/include/Core",
-                    "c:/Users/teme4/Documents/DOF_Keil/include/Core/Inc",
-                    "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/STM32F4xx_HAL_Driver/Inc",
-                    "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS",
-                    "c:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS/Include",
+                    "C:/Users/teme4/Documents/DOF_Keil/include",
+                    "C:/Users/teme4/Documents/DOF_Keil/src",
+                    "C:/Users/teme4/Documents/DOF_Keil/include/Core",
+                    "C:/Users/teme4/Documents/DOF_Keil/include/Core/Inc",
+                    "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/STM32F4xx_HAL_Driver/Inc",
+                    "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS",
+                    "C:/Users/teme4/Documents/DOF_Keil/include/Drivers/CMSIS/Include",
                     "C:/Users/teme4/.platformio/packages/framework-cmsis/CMSIS/Include",
                     "C:/Users/teme4/.platformio/packages/framework-cmsis-stm32f4/Include",
                     ""

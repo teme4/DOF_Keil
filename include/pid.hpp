@@ -6,13 +6,13 @@
 #include "stdio.h"
 #include "usart.hpp"
 
-extern double PID,temp_current,temp_delta,temp_last,temp_int,
+extern double PID,temp_current,temp_delta,temp_i,temp_int,temp_d,
 kp,
 ki,
 kd,
 P,I,D;
 
-extern uint32_t val,pwm,reg_max,reg_min,time;
+extern uint32_t val,pwm,reg_max,reg_min,dt;
 extern char buffer[100];
 extern usart uart_1;
 
@@ -23,6 +23,7 @@ private:
 
 public:
  void start(double set_temp);
+ double calc_PID(double setpoint,double kp,double ki,double kd);
 };
 
  #endif //PID

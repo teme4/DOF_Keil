@@ -16,7 +16,7 @@ uint8_t TxCounter = 0, RxCounter = 0;
 std::vector<char> TxData; // Вектор целых чисел
 
 
-uint16_t ctr=0,dt=0;
+uint16_t ctr=0;//,dt=0;
 unsigned short DATA_ADC[10];
 double vol_arr_temp[10];
 double vol_arr[10];
@@ -37,11 +37,11 @@ char buffer2[100];
 char buffer[100];
 
 
-uint32_t val,pwm,reg_max=27000,reg_min,time=0;
-double PID,temp_current,temp_delta,temp_last,
+uint32_t val,pwm,reg_max=27000,reg_min,dt=0;
+double PID,temp_current,temp_delta,temp_i,temp_d,
 kp=27000,
-ki=0,
-kd=0,
+ki=10,
+kd=450,
 P,I,D;
 
 uint8_t pin_ready=9,
@@ -69,7 +69,7 @@ usart uart_1;
 pid pid_int;
 
 double volt=0;
-double temp_int=0,temp_ext=0,temp_rad=0;
+double temp_int,temp_ext=0,temp_rad=0;
 
 
 double _TransferFunction(double voltage)
@@ -791,6 +791,7 @@ uart_1.uart_tx_data("BreakPoint_1");
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
  pid_int.start(-30);
+ //pid_int.calc_PID(-30.0,27000.0,0.01,0.1);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
 		/*rx1_s[0]=rx1[0];
