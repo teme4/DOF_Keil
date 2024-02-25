@@ -5,7 +5,6 @@
 #include "delay.hpp"
 #include "pid.hpp"
 
-
 #include <string>
 #include <vector>
 #include "math.h"
@@ -35,8 +34,15 @@ extern uint8_t rx1_s[18];
 extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 char buffer2[100];
+char buffer[100];
 
 
+uint32_t val,pwm,reg_max=27000,reg_min,time=0;
+double PID,temp_current,temp_delta,temp_last,
+kp=27000,
+ki=0,
+kd=0,
+P,I,D;
 
 uint8_t pin_ready=9,
         led_red=11,
@@ -445,28 +451,28 @@ void MX_DAC_Init(void)
 // void sys_delay_us(uint32_t us)
 // {
 //    int32_t us_count_tick =  us * (16000000/1000000);
-//    //разрешаем использовать счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-//    //обнуляем значение счётного регистра
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CYCCNT  = 0;
-//    //запускаем счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
 //    while(DWT_CYCCNT < us_count_tick);
-//    //останавливаем счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
 // }
 
 // void sys_delay_ms(uint32_t ms)
 // {
 //    int32_t ms_count_tick =  ms * (16000000/1000);
-//    //разрешаем использовать счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-//    //обнуляем значение счётного регистра
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CYCCNT  = 0;
-//    //запускаем счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 //    while(DWT_CYCCNT < ms_count_tick);
-//    //останавливаем счётчик
+//    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 //    DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
 // }
 
@@ -781,7 +787,7 @@ uart_1.uart_tx_data("BreakPoint_1");
   while (1)
   {
      DWT_CYCCNT  = 0;
-   //запускаем счётчик
+   //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
  pid_int.start(-30);

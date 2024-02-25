@@ -6,18 +6,16 @@
 #include "stdio.h"
 #include "usart.hpp"
 
-double PID,temp_current,temp_delta,temp_last,
-kp=27000,
-ki=0,
-kd=0,
+extern double PID,temp_current,temp_delta,temp_last,temp_int,
+kp,
+ki,
+kd,
 P,I,D;
 
-extern double temp_int;
-
+extern uint32_t val,pwm,reg_max,reg_min,time;
+extern char buffer[100];
 extern usart uart_1;
 
-uint32_t val,pwm,reg_max=27000,reg_min,time=0;
-char buffer[100];
 
 class pid
 {
