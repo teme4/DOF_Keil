@@ -18,7 +18,7 @@ std::vector<char> TxData; // Вектор целых чисел
 
 uint16_t ctr=0;//,dt=0;
 unsigned short DATA_ADC[10];
-double vol_arr_temp[10];
+double vol_arr_temp[10],d_temp=0;;
 double vol_arr[10];
 unsigned int DATA_ADCacc;
 volatile unsigned int DATA_ADCaccout;
@@ -39,9 +39,9 @@ char buffer[100];
 
 uint32_t val,pwm,reg_max=27000,reg_min,dt=0;
 double PID,temp_current,temp_delta,temp_i,temp_d,
-kp=27000,
-ki=10,
-kd=450,
+kp=25000,
+ki=0.15,
+kd=0,
 P,I,D;
 
 uint8_t pin_ready=9,
@@ -130,7 +130,7 @@ void ADC_SCAN (void)
 	DATA_ADCacc1=0;
 	DATA_ADCacc2=0;
 	DATA_ADCacc3=0;
-  int val_avg=10;
+  int val_avg=500;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
@@ -147,11 +147,13 @@ void ADC_SCAN (void)
           vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
         }
         }
+        //vol_arr_temp[0]=d_temp;
         for(int i=0;i<10;i++)
         {
           vol_arr[i]=vol_arr_temp[i]/val_avg;
         }
-
+// sprintf(buffer2, ">temp:%f\n",_TransferFunction(vol_arr[2]));
+//  uart_1.uart_tx_data(buffer2);
 /*
 		// Temperature
 	ADC1->SQR3 = 0;
@@ -205,28 +207,28 @@ void ADC_SCAN (void)
 		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	*/
 	// 	ctr++;
 	// }
-	DATA_ADCaccout=DATA_ADCacc/512;
-	DATA_ADCaccout1=DATA_ADCacc1/512;
-	DATA_ADCaccout2=DATA_ADCacc2/512;
-	DATA_ADCaccout3=DATA_ADCacc3/512;
-	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
-	{
-  gpio_stm32f405.set_pin_state(GPIOB,led_red,1);
-  gpio_stm32f405.set_pin_state(GPIOB,pin_ready,0);
-  gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
-	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	}
-	else
-	{
-  gpio_stm32f405.set_pin_state(GPIOB,led_red,0);
-  gpio_stm32f405.set_pin_state(GPIOB,pin_ready,1);
-  gpio_stm32f405.set_pin_state(GPIOB,led_green,1);
-	// LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	// LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	}
+	// DATA_ADCaccout=DATA_ADCacc/512;
+	// DATA_ADCaccout1=DATA_ADCacc1/512;
+	// DATA_ADCaccout2=DATA_ADCacc2/512;
+	// DATA_ADCaccout3=DATA_ADCacc3/512;
+	// if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
+	// {
+  // gpio_stm32f405.set_pin_state(GPIOB,led_red,1);
+  // gpio_stm32f405.set_pin_state(GPIOB,pin_ready,0);
+  // gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
+	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	// }
+	// else
+	// {
+  // gpio_stm32f405.set_pin_state(GPIOB,led_red,0);
+  // gpio_stm32f405.set_pin_state(GPIOB,pin_ready,1);
+  // gpio_stm32f405.set_pin_state(GPIOB,led_green,1);
+	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	// }
 	//DATA_ADC =257;
 //	ADC1->SQR3 = 2;
 //	ADC1->CR2 |= ADC_CR2_SWSTART;
@@ -247,13 +249,13 @@ void ADC_SCAN (void)
 //	ADC1->CR2 |= ADC_CR2_SWSTART;
 //	while (!(ADC1->SR & ADC_SR_EOC)) ;
 //	DATA_ADC[6] = ADC1->DR;
-	
+	//d_temp=vol_arr[2];
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]);
 
 sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
- uart_1.uart_tx_data(buffer2);
+uart_1.uart_tx_data(buffer2);
 }
 /*
 void SystemClock_Config(void)
@@ -699,8 +701,6 @@ static void MX_GPIO_Init(void)
 
 int main()
 {
-
-
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
   NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
@@ -790,7 +790,7 @@ uart_1.uart_tx_data("BreakPoint_1");
    //��������� �������
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- pid_int.start(-30);
+ pid_int.start(-35);
  //pid_int.calc_PID(-30.0,27000.0,0.01,0.1);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
