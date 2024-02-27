@@ -37,12 +37,14 @@ char buffer2[100];
 char buffer[100];
 
 
-uint32_t val,pwm,reg_max=27000,reg_min,dt=0;
+
 double PID,temp_current,temp_delta,temp_i,temp_d,
-kp=25000,
+kp=28000,//4.75V
 ki=0.15,
 kd=0,
 P,I,D;
+
+uint32_t val,pwm,reg_max=kp,reg_min,dt=0;
 
 uint8_t pin_ready=9,
         led_red=11,
@@ -130,7 +132,7 @@ void ADC_SCAN (void)
 	DATA_ADCacc1=0;
 	DATA_ADCacc2=0;
 	DATA_ADCacc3=0;
-  int val_avg=500;
+  int val_avg=1000;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
@@ -145,12 +147,14 @@ void ADC_SCAN (void)
           ADC1->CR2 |= ADC_CR2_SWSTART;
           while(!(ADC1->SR & ADC_SR_EOC)){}
           vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
+          vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
         }
         }
         //vol_arr_temp[0]=d_temp;
         for(int i=0;i<10;i++)
         {
           vol_arr[i]=vol_arr_temp[i]/val_avg;
+          vol_arr[i]=std::round(vol_arr[i]*100)/100;
         }
 // sprintf(buffer2, ">temp:%f\n",_TransferFunction(vol_arr[2]));
 //  uart_1.uart_tx_data(buffer2);
@@ -252,9 +256,13 @@ void ADC_SCAN (void)
 	//d_temp=vol_arr[2];
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
-  temp_rad=_TransferFunction(vol_arr[9]);
-
+  temp_rad=_TransferFunction(vol_arr[9]*100);
+  //temp_int=std::round(temp_int*1000)/1000;
 sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
+uart_1.uart_tx_data(buffer2);
+sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
+uart_1.uart_tx_data(buffer2);
+sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
 uart_1.uart_tx_data(buffer2);
 }
 /*
@@ -634,7 +642,7 @@ void MX_TIM3_Init(void)
     TIM3->ARR = 50000 - 1; // Set auto-reload to 10
     TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
     TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
-    TIM3->CCR3 =27000;// 44000; // Set the duty cycle to 50%
+    TIM3->CCR3 =kp;// 44000; // Set the duty cycle to 50%
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
@@ -790,7 +798,7 @@ uart_1.uart_tx_data("BreakPoint_1");
    //��������� �������
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- pid_int.start(-35);
+ pid_int.start(-60);
  //pid_int.calc_PID(-30.0,27000.0,0.01,0.1);
    /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
                 uart_1.uart_tx_data(buffer);*/
