@@ -37,7 +37,7 @@ uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
 
-double temp_work=-35;
+double temp_work=-18;
 
 double PID,temp_current,temp_delta,temp_i,temp_d,
 kp=28000,//4.75V
@@ -74,7 +74,7 @@ usart uart_1;
 pid pid_int;
 
 double volt=0;
-double temp_int,temp_ext=0,temp_rad=0;
+double temp_int,temp_ext=0,temp_rad=0,V_bias=0;
 
 
 double _TransferFunction(double voltage)
@@ -130,6 +130,83 @@ void delay_us(uint32_t us)
 
 void ADC_SCAN (void)
 {
+/////////////////////////////////////////////////////////////////
+	ctr=0;
+	DATA_ADCacc=0;
+	DATA_ADCacc1=0;
+	DATA_ADCacc2=0;
+	DATA_ADCacc3=0;
+	while (ctr<1024)
+	{
+		// Temperature
+	ADC1->SQR3 = 0;//2;
+	ADC1->CR2 |= ADC_CR2_SWSTART;
+//		gcnt = 0;
+	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+		dt=0;
+		while (dt<100)
+		{
+			dt++;
+		}
+	DATA_ADC[0] = ADC1->DR;
+		DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
+		// Bias1
+	ADC1->SQR3 = 1;//3;//0;
+	ADC1->CR2 |= ADC_CR2_SWSTART;
+	//	gcnt = 0;
+	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+		dt=0;
+		while (dt<100)
+		{
+			dt++;
+		}
+	DATA_ADC[1] = ADC1->DR;
+		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
+		// Temperature
+	ADC1->SQR3 = 2;//7;//1;
+	ADC1->CR2 |= ADC_CR2_SWSTART;
+	//	gcnt = 0;
+	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+		dt=0;
+		while (dt<100)
+		{
+			dt++;
+		}
+	DATA_ADC[2] = ADC1->DR;
+		DATA_ADCacc2=DATA_ADCacc2+DATA_ADC[2];
+			// Temperature
+	ADC1->SQR3 = 6;//7;//1;
+	ADC1->CR2 |= ADC_CR2_SWSTART;
+	//	gcnt = 0;
+	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+		dt=0;
+		while (dt<100)
+		{
+			dt++;
+		}
+	DATA_ADC[3] = ADC1->DR;
+		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	
+		ctr++;
+	}
+	DATA_ADCaccout=DATA_ADCacc/512;
+	DATA_ADCaccout1=DATA_ADCacc1/512;
+	DATA_ADCaccout2=DATA_ADCacc2/512;
+  sprintf(buffer2, ">temp_ADC:%d\n",DATA_ADCaccout2);
+  uart_1.uart_tx_data(buffer2);
+	DATA_ADCaccout3=DATA_ADCacc3/512;
+	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
+	{
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	}
+	else
+	{
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	}
+  /////////////////////////////////////////////////////////////
   int val_avg=300;
   for(int z=0;z<10;z++)
   {
@@ -153,7 +230,7 @@ void ADC_SCAN (void)
           vol_arr[i]=vol_arr_temp[i]/val_avg;
           vol_arr[i]=std::round(vol_arr[i]*1000)/1000;
         }
-
+  V_bias=(vol_arr[0]*234);
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]*100);
@@ -164,8 +241,9 @@ sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
 uart_1.uart_tx_data(buffer2);
 sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
 uart_1.uart_tx_data(buffer2);
-
-	if (temp_int<-35)
+sprintf(buffer2, ">v_bias:%-8.2f\n",V_bias);
+uart_1.uart_tx_data(buffer2);
+	if (temp_int>=temp_work+1)
 	{
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
 	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
