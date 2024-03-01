@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include "stm32f4xx_it.h"
 
 #include "gpio.hpp"
 #include "usart.hpp"
@@ -36,16 +37,16 @@ uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
 
-
+double temp_work=-35;
 
 double PID,temp_current,temp_delta,temp_i,temp_d,
 kp=28000,//4.75V
-ki=0.15,
-kd=0,
+ki=50,
+kd=kp*2,
 P,I,D;
 
-uint32_t val,pwm,reg_max=kp,reg_min,dt=0;
 
+uint32_t val,pwm,reg_max=kp,reg_min,dt=0;
 uint8_t pin_ready=9,
         led_red=11,
         led_green=10,
@@ -53,7 +54,9 @@ uint8_t pin_ready=9,
         spi_miso=11,
         spi_mosi=12,
         spi_nss=15,
+
         pin_dac_1=4,
+        pin_dac_2=5,
         pin_adc_0=0,
         pin_adc_1=1,
         pin_adc_2=2,
@@ -75,23 +78,23 @@ double temp_int,temp_ext=0,temp_rad=0;
 
 
 double _TransferFunction(double voltage)
-            {
-            return (-1481.96 + sqrt((2.1962 * pow(10, 6)) + (1.8639 - voltage) / (3.88 * pow(10, -6))));
-            }
+  {
+      return(-1481.96 + sqrt((2.1962 * pow(10, 6)) + (1.8639 - voltage) / (3.88 * pow(10, -6))));
+  }
 
 
 
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_DAC_Init(void);
-static void MX_SPI2_Init(void);
-//static void MX_SPI3_Init(void);
-static void MX_TIM14_Init(void);
+// void SystemClock_Config(void);
+// static void MX_GPIO_Init(void);
+// static void MX_ADC1_Init(void);
+// static void MX_DAC_Init(void);
+// static void MX_SPI2_Init(void);
+// //static void MX_SPI3_Init(void);
+// static void MX_TIM14_Init(void);
 
-void ADC_SCAN (void);
+// void ADC_SCAN (void);
 
 void delay_ms(uint32_t us)
 {
@@ -127,17 +130,11 @@ void delay_us(uint32_t us)
 
 void ADC_SCAN (void)
 {
-	ctr=0;
-	DATA_ADCacc=0;
-	DATA_ADCacc1=0;
-	DATA_ADCacc2=0;
-	DATA_ADCacc3=0;
-  int val_avg=1000;
+  int val_avg=300;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
   }
-
 
    for(int i=0;i<val_avg;i++)
         {
@@ -145,125 +142,41 @@ void ADC_SCAN (void)
         {
           ADC1->SQR3 = j;
           ADC1->CR2 |= ADC_CR2_SWSTART;
+
           while(!(ADC1->SR & ADC_SR_EOC)){}
           vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
-          vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
+          vol_arr_temp[j]=std::round(vol_arr_temp[j]*1000)/1000;
         }
         }
-        //vol_arr_temp[0]=d_temp;
         for(int i=0;i<10;i++)
         {
           vol_arr[i]=vol_arr_temp[i]/val_avg;
-          vol_arr[i]=std::round(vol_arr[i]*100)/100;
+          vol_arr[i]=std::round(vol_arr[i]*1000)/1000;
         }
-// sprintf(buffer2, ">temp:%f\n",_TransferFunction(vol_arr[2]));
-//  uart_1.uart_tx_data(buffer2);
-/*
-		// Temperature
-	ADC1->SQR3 = 0;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
 
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-
-	DATA_ADC[0] = ADC1->DR;
-	DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
-
-		// Bias1
-	ADC1->SQR3 = 1;//3;//0;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-
-	DATA_ADC[1] = ADC1->DR;//dacc2dhr
-		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
-
-		// Temperature
-	ADC1->SQR3 = 2;//7;//1;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[2] = ADC1->DR;
-		DATA_ADCacc2=DATA_ADCacc2+DATA_ADC[2];
-			// Temperature
-	ADC1->SQR3 = 6;//7;//1;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[3] = ADC1->DR;
-		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	*/
-	// 	ctr++;
-	// }
-	// DATA_ADCaccout=DATA_ADCacc/512;
-	// DATA_ADCaccout1=DATA_ADCacc1/512;
-	// DATA_ADCaccout2=DATA_ADCacc2/512;
-	// DATA_ADCaccout3=DATA_ADCacc3/512;
-	// if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
-	// {
-  // gpio_stm32f405.set_pin_state(GPIOB,led_red,1);
-  // gpio_stm32f405.set_pin_state(GPIOB,pin_ready,0);
-  // gpio_stm32f405.set_pin_state(GPIOB,led_green,0);
-	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	// }
-	// else
-	// {
-  // gpio_stm32f405.set_pin_state(GPIOB,led_red,0);
-  // gpio_stm32f405.set_pin_state(GPIOB,pin_ready,1);
-  // gpio_stm32f405.set_pin_state(GPIOB,led_green,1);
-	// // LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	// // LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	// }
-	//DATA_ADC =257;
-//	ADC1->SQR3 = 2;
-//	ADC1->CR2 |= ADC_CR2_SWSTART;
-//	while ((ADC1->SR & ADC_SR_EOC)) ;
-//	DATA_ADC[1] = ADC1->DR;
-
-//  ADC1->SQR3 = 3;
-//	ADC1->CR2 |= ADC_CR2_SWSTART;
-//	while ((ADC1->SR & ADC_SR_EOC)) ;
-//	DATA_ADC[2] = ADC1->DR;
-
-//	ADC1->SQR3 = 4;
-//	ADC1->CR2 |= ADC_CR2_SWSTART;
-//	while (!(ADC1->SR & ADC_SR_EOC)) ;
-//	DATA_ADC[9] = ADC1->DR;	
-//	
-//	ADC1->SQR3 = 8;
-//	ADC1->CR2 |= ADC_CR2_SWSTART;
-//	while (!(ADC1->SR & ADC_SR_EOC)) ;
-//	DATA_ADC[6] = ADC1->DR;
-	//d_temp=vol_arr[2];
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]*100);
-  //temp_int=std::round(temp_int*1000)/1000;
+
 sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
 uart_1.uart_tx_data(buffer2);
 sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
 uart_1.uart_tx_data(buffer2);
 sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
 uart_1.uart_tx_data(buffer2);
+
+	if (temp_int<-35)
+	{
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	}
+	else
+	{
+	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+	}
 }
 /*
 void SystemClock_Config(void)
@@ -436,7 +349,7 @@ void MX_DAC_Init(void)
 {
   /* Peripheral clock enable */
   RCC->APB1ENR |= RCC_APB1ENR_DACEN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+  //RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
   /* GPIO Configuration */
   //GPIOA->MODER |= GPIO_MODER_MODER4 | GPIO_MODER_MODER5;
@@ -444,12 +357,14 @@ void MX_DAC_Init(void)
   /* DAC Configuration */
   DAC->CR &= ~DAC_CR_TSEL1;
   DAC->CR &= ~DAC_CR_WAVE1;
-  DAC->CR |= DAC_CR_BOFF1;
+  //DAC->CR |= DAC_CR_BOFF1;
+  DAC->CR &= ~DAC_CR_BOFF1;
 
   /* DAC Channel 2 Configuration */
   DAC->CR &= ~DAC_CR_TSEL2;
   DAC->CR &= ~DAC_CR_WAVE2;
-  DAC->CR |= DAC_CR_BOFF2;
+  // DAC->CR |= DAC_CR_BOFF2;
+  DAC->CR &=~ DAC_CR_BOFF2;
 
   /* DAC Enable */
   DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
@@ -543,49 +458,49 @@ static void MX_SPI2_Init(void)
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
   }*/
 
-// static void MX_SPI3_Init(void)
-// {
+static void MX_SPI3_Init(void)
+{
 
-//   LL_SPI_InitTypeDef SPI_InitStruct = {0};
-//   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-//   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
-//   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-//   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-//   /**SPI3 GPIO Configuration
-//   PA15   ------> SPI3_NSS
-//   PC10   ------> SPI3_SCK
-//   PC11   ------> SPI3_MISO
-//   PC12   ------> SPI3_MOSI
-//   */
-//   GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
-//   GPIO_InitStruct.Mode = 1;//LL_GPIO_MODE_ALTERNATE;
-//   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-//   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-//   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-//   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-//   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  LL_SPI_InitTypeDef SPI_InitStruct = {0};
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+  /**SPI3 GPIO Configuration
+  PA15   ------> SPI3_NSS
+  PC10   ------> SPI3_SCK
+  PC11   ------> SPI3_MISO
+  PC12   ------> SPI3_MOSI
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Mode = 1;//LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-//   GPIO_InitStruct.Pin = LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_12;
-//   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-//   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-//   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-//   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-//   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-//   LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_12;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-//   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
-//   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
-//   SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;//LL_SPI_DATAWIDTH_8BIT;
-//   SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
-//   SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
-//   SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
-//   SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
-//   SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;//LL_SPI_MSB_FIRST;
-//   SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-//   SPI_InitStruct.CRCPoly = 10;
-//   LL_SPI_Init(SPI3, &SPI_InitStruct);
-//   LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
-// }
+  SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
+  SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
+  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;//LL_SPI_DATAWIDTH_8BIT;
+  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
+  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
+  SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
+  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+  SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;//LL_SPI_MSB_FIRST;
+  SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  SPI_InitStruct.CRCPoly = 10;
+  LL_SPI_Init(SPI3, &SPI_InitStruct);
+  LL_SPI_SetStandard(SPI3, LL_SPI_PROTOCOL_MOTOROLA);
+}
 /*
 static void MX_TIM14_Init(void)
 {
@@ -632,6 +547,7 @@ void MX_TIM14_Init(void)
   TIM14->CCR1 = 0;
   TIM14->CCER &= ~TIM_CCER_CC1P;
   TIM14->BDTR |= TIM_BDTR_MOE;
+  TIM14->DIER |= TIM_DIER_UIE;
   TIM14->CR1 |= TIM_CR1_CEN;
 }
 
@@ -719,11 +635,11 @@ int main()
   MX_ADC1_Init();
   MX_DAC_Init();
   MX_SPI2_Init();
- //MX_SPI3_Init();
+  MX_SPI3_Init();
   MX_TIM14_Init();
   MX_TIM3_Init();
 LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
-  
+  uint32_t bias2=0,threshold2=0;
 
 //gpio gpio_stm32f405;
 //UASRT1_gpio PA9 -> Tx  PA10 -> Rx
@@ -740,8 +656,10 @@ gpio_stm32f405.gpio_init(GPIOC,spi_sck,gpio_type::gpio_type_pp,gpio_mode::gpio_m
 gpio_stm32f405.gpio_init(GPIOC,spi_mosi,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOC,spi_miso,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,spi_nss,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
-//ADC
+//DAC
 gpio_stm32f405.gpio_init(GPIOA,pin_dac_1,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOA,pin_dac_2,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//ADC
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_0,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_1,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_2,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
@@ -762,6 +680,7 @@ gpio_stm32f405.config_af(GPIOB,0,2);//AF1
 
 uart_1.usart_init();
 
+	LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
 
 	rx1[4]=32;
 	rx0[0]=170;
@@ -775,11 +694,13 @@ uart_1.usart_init();
 	rx0[8]=0;	//128
 
 
-/*LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-	LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);*/
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
 
-  DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
-  DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
+   DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
+   DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
+
+
 
   LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
@@ -791,22 +712,23 @@ uart_1.uart_tx_data("BreakPoint_1");
 */
 //USART1->DR=myString;
 
-
+rx1[3]=0xE0;
+rx1[8]=0x80;
   while (1)
   {
      DWT_CYCCNT  = 0;
    //��������� �������
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
- pid_int.start(-60);
- //pid_int.calc_PID(-30.0,27000.0,0.01,0.1);
-   /* sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
-                uart_1.uart_tx_data(buffer);*/
-		/*rx1_s[0]=rx1[0];
-		if ((DATA_ADCaccout2<=7000)&&(DATA_ADCaccout2>=3000))
+ pid_int.start(temp_work);
+   
+
+  
+		rx1_s[0]=rx1[0];
+		if ((temp_int<=temp_work+1))
 		{
-		rx1_s[1]=temp[DATA_ADCaccout2/2-1500]>>8;//DATA_ADCaccout2>>8;
-		rx1_s[2]=temp[DATA_ADCaccout2/2-1500]&255;//DATA_ADCaccout2&255;
+		rx1_s[1]=temp[5000/2-1500]>>8;//DATA_ADCaccout2>>8;
+		rx1_s[2]=temp[5000/2-1500]&255;//DATA_ADCaccout2&255;
 		}
 		else
 		{
@@ -832,7 +754,7 @@ ADC_SCAN ();
 		rx1_s[10]=1;
 		rx1_s[11]=10;
 		rx1_s[12]=1;
-		rx1_s[13]=0;*/
+		rx1_s[13]=0;
   }
 }
 

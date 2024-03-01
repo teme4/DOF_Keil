@@ -23,87 +23,56 @@ volatile uint8_t gcnt;
 int32_t StartPageAddr = 0x08008000;
 uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
 
+extern double temp_work,temp_int;
+
 void TIM8_TRG_COM_TIM14_IRQHandler(void)
 {
 	TIM14->SR=0;
 	ptr=0;
 	gcnt++;
-	/*
-	rx2[0]=170;
-	rx2[1]=60;
-	rx2[2]=6;
-	rx2[3]=155;
-	rx2[4]=2;
-	rx2[5]=155;
-	rx2[6]=4;
-	rx2[7]=0;
-	*/
-	
-	if (rx1[8]<100)
+
+	if (rx1[8]!=0x80)
 	{
-	//if ((DATA_ADCaccout<7646)&&(DATA_ADCaccout>7000))//(((DATA_ADCaccout&255)<240)&&((DATA_ADCaccout>>8)>0x0b))
-	//{LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, ((7646-(DATA_ADCaccout))>>2)+0x710);//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, ((240-(DATA_ADCaccout&255))>>2)+256*6);
-	//}
-	if ((DATA_ADCaccout2<7000)&&(DATA_ADCaccout2>=4900))//(((DATA_ADCaccout&255)<240)&&((DATA_ADCaccout>>8)>0x0b))
-	{
-		baddr=DATA_ADCaccout2-4899;
-//		if (pkuc[0]==9)
-//		{
-//			LL_DAC_ConvertData12RightAligned (DAC2, LL_DAC_CHANNEL_1, (bias[baddr]+rx1[6]-256+256*pkuc[4]+pkuc[3]));
-//		  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 256*pkuc[2]+pkuc[1]);
-//		}
-//			else
+	if (temp_int>=temp_work+1)
 		{
-		LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));//-512+16+64               +48+32 -320 - BRI, -320+177 - slx4-2, -320+260 itmo 001, -320+147, -320+250+359 itmo 009, -320+196itmo 005, -320+480 Q?, -320+522 011
-	    LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);//48+256*1); // 44 76  72+4+256*1   176+8+256*2
+			// //baddr=DATA_ADCaccout2-4899;
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);
 		}
-		// 67A@4719 det 025
-	}
 	else
-	{ if (DATA_ADCaccout2>=7200)
-		{LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);//0x600 0x570
+	{
+		if (temp_int>=7200)
+		{
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
 		}
-		else
-		{LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
-		}
-		;
 	}
 }
-	
-	//rx1[0]=70;
-/*	rx1[1]=6;
-	rx1[2]=7;
-	rx1[3]=91;
-	rx1[4]=10;//2
-	rx1[5]=104;
-	rx1[6]=10;//4
-	rx1[7]=0;*/
+
 	LL_GPIO_ResetOutputPin(GPIOA,LL_GPIO_PIN_15);
-	LL_SPI_Enable(SPI3);	
+	LL_SPI_Enable(SPI3);
 			while (ptr<14)
 			{
 			 LL_SPI_TransmitData16(SPI3,rx1_s[ptr]+256*rx1_s[ptr+1]); //0x0060
 			 while (LL_SPI_IsActiveFlag_TXE(SPI3)==0) //LL_SPI_IsActiveFlag_BSY(SPI3)
 				{
-				}			 
+				}
 			 while (LL_SPI_IsActiveFlag_RXNE(SPI3)==0) //LL_SPI_IsActiveFlag_BSY(SPI3)
 				{
 				}
 			 spi_rx16[ptr>>1]=LL_SPI_ReceiveData16(SPI3);
 			 ptr=ptr+2;
-			}	
-				LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_15);
-						LL_SPI_Disable(SPI3);	
+			}
+			LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_15);
+			LL_SPI_Disable(SPI3);
 			cnt_v[1]=spi_rx16[1];
 			cnt_v[0]=spi_rx16[1]>>8;
 			pkuc[0]=spi_rx16[2]>>12;
 			pkuc[1]=spi_rx16[2]&0x00ff;
 			pkuc[2]=(spi_rx16[2]>>8)&0x0f;
 			pkuc[3]=spi_rx16[3]&0x00ff;
-			pkuc[4]=(spi_rx16[3]>>8)&0x0f;			
- return; 
+			pkuc[4]=(spi_rx16[3]>>8)&0x0f;
+ 		return;
 	}
-
 
 /*
 void USART1_IRQHandler(void)

@@ -1,1 +1,4 @@
 
+MapFile.map
+.pio/build/genericSTM32F405RG/firmware.elf
+.pio/build/genericSTM32F405RG/firmware.bin

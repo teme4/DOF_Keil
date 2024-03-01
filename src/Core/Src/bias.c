@@ -1800,7 +1800,5 @@ volatile unsigned short bias[1801] = {
 1346	,
 1346	,
 1345	,
-1345	
-
-
+1345
 };
