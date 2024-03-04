@@ -3,6 +3,7 @@
 
  void pid::start(double set_temp)
 {
+  set_temp+=-0.2;
 double integral=0,prevTemp=0;
 temp_delta=temp_int-set_temp;
 sprintf(buffer, ">temp_delta:%-8.2f\n",temp_delta);
@@ -12,7 +13,7 @@ dt=DWT_CYCCNT/1000;
 integral+=temp_delta*dt*ki;
 sprintf(buffer, ">PID_I:%-8.2f\n",integral*ki);
  uart_1.uart_tx_data(buffer);
-sprintf(buffer, ">set:%f\n",set_temp);
+sprintf(buffer, ">set:%f\n",set_temp+0.2);
  uart_1.uart_tx_data(buffer);
 
 double D=(temp_delta-prevTemp)/dt;

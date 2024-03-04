@@ -1,5 +1,4 @@
 #include "main.hpp"
-#include "stm32f4xx_it.h"
 
 #include "gpio.hpp"
 #include "usart.hpp"
@@ -9,6 +8,29 @@
 #include <string>
 #include <vector>
 #include "math.h"
+
+
+// extern volatile unsigned short DATA_ADCaccout2;
+// extern volatile unsigned short bias[1601];
+ uint16_t spi_rx16[4];
+volatile uint8_t rx1[18];
+volatile uint8_t rx1_s[18];
+  uint8_t rx2[10] __attribute__((used));
+  uint8_t ptr=0;
+  uint8_t ptr2=0;
+  uint16_t baddr=700;
+  int16_t bias_off=-173+26+77-58+16+64;
+  uint16_t threshold = 0x12d;//0x132;//139
+  
+volatile uint8_t cntspi2=0;
+volatile uint8_t cnt_v[2];
+volatile uint8_t spi2_v[5];
+volatile uint8_t lev;
+volatile uint8_t pkuc[6];
+volatile uint8_t gcnt;
+int32_t StartPageAddr = 0x08008000;
+uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
+
 
 
 uint8_t *TxBuffer;
@@ -30,19 +52,19 @@ volatile unsigned int DATA_ADCaccout2;
 unsigned int DATA_ADCacc3;
 volatile unsigned int DATA_ADCaccout3;
 volatile unsigned int DATA_ADCaccoutx;
-extern uint8_t rx1[18];
-extern uint8_t rx1_s[18];
+// extern uint8_t rx1[18];
+// extern uint8_t rx1_s[18];
 extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
 
-double temp_work=-18;
+double temp_work=-30;
 
 double PID,temp_current,temp_delta,temp_i,temp_d,
 kp=28000,//4.75V
-ki=50,
-kd=kp*2,
+ki=0.45,//0,5
+kd=0,
 P,I,D;
 
 
@@ -130,84 +152,84 @@ void delay_us(uint32_t us)
 
 void ADC_SCAN (void)
 {
-/////////////////////////////////////////////////////////////////
-	ctr=0;
-	DATA_ADCacc=0;
-	DATA_ADCacc1=0;
-	DATA_ADCacc2=0;
-	DATA_ADCacc3=0;
-	while (ctr<1024)
-	{
-		// Temperature
-	ADC1->SQR3 = 0;//2;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-//		gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[0] = ADC1->DR;
-		DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
-		// Bias1
-	ADC1->SQR3 = 1;//3;//0;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[1] = ADC1->DR;
-		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
-		// Temperature
-	ADC1->SQR3 = 2;//7;//1;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[2] = ADC1->DR;
-		DATA_ADCacc2=DATA_ADCacc2+DATA_ADC[2];
-			// Temperature
-	ADC1->SQR3 = 6;//7;//1;
-	ADC1->CR2 |= ADC_CR2_SWSTART;
-	//	gcnt = 0;
-	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
-		dt=0;
-		while (dt<100)
-		{
-			dt++;
-		}
-	DATA_ADC[3] = ADC1->DR;
-		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	
-		ctr++;
-	}
-	DATA_ADCaccout=DATA_ADCacc/512;
-	DATA_ADCaccout1=DATA_ADCacc1/512;
-	DATA_ADCaccout2=DATA_ADCacc2/512;
-  sprintf(buffer2, ">temp_ADC:%d\n",DATA_ADCaccout2);
-  uart_1.uart_tx_data(buffer2);
-	DATA_ADCaccout3=DATA_ADCacc3/512;
-	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
-	{
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	}
-	else
-	{
-	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
-	}
+// /////////////////////////////////////////////////////////////////
+// 	ctr=0;
+// 	DATA_ADCacc=0;
+// 	DATA_ADCacc1=0;
+// 	DATA_ADCacc2=0;
+// 	DATA_ADCacc3=0;
+// 	while (ctr<1024)
+// 	{
+// 		// Temperature
+// 	ADC1->SQR3 = 0;//2;
+// 	ADC1->CR2 |= ADC_CR2_SWSTART;
+// //		gcnt = 0;
+// 	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+// 		dt=0;
+// 		while (dt<100)
+// 		{
+// 			dt++;
+// 		}
+// 	DATA_ADC[0] = ADC1->DR;
+// 		DATA_ADCacc=DATA_ADCacc+DATA_ADC[0];
+// 		// Bias1
+// 	ADC1->SQR3 = 1;//3;//0;
+// 	ADC1->CR2 |= ADC_CR2_SWSTART;
+// 	//	gcnt = 0;
+// 	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+// 		dt=0;
+// 		while (dt<100)
+// 		{
+// 			dt++;
+// 		}
+// 	DATA_ADC[1] = ADC1->DR;
+// 		DATA_ADCacc1=DATA_ADCacc1+DATA_ADC[1];
+// 		// Temperature
+// 	ADC1->SQR3 = 2;//7;//1;
+// 	ADC1->CR2 |= ADC_CR2_SWSTART;
+// 	//	gcnt = 0;
+// 	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+// 		dt=0;
+// 		while (dt<100)
+// 		{
+// 			dt++;
+// 		}
+// 	DATA_ADC[2] = ADC1->DR;
+// 		DATA_ADCacc2=DATA_ADCacc2+DATA_ADC[2];
+// 			// Temperature
+// 	ADC1->SQR3 = 6;//7;//1;
+// 	ADC1->CR2 |= ADC_CR2_SWSTART;
+// 	//	gcnt = 0;
+// 	//while ((!(ADC1->SR & ADC_SR_EOC))&&(gcnt<2)) ;
+// 		dt=0;
+// 		while (dt<100)
+// 		{
+// 			dt++;
+// 		}
+// 	DATA_ADC[3] = ADC1->DR;
+// 		DATA_ADCacc3=DATA_ADCacc3+DATA_ADC[3];	
+// 		ctr++;
+// 	}
+// 	DATA_ADCaccout=DATA_ADCacc/512;
+// 	DATA_ADCaccout1=DATA_ADCacc1/512;
+// 	DATA_ADCaccout2=DATA_ADCacc2/512;
+//   sprintf(buffer2, ">temp_ADC:%d\n",DATA_ADCaccout2);
+//   uart_1.uart_tx_data(buffer2);
+// 	DATA_ADCaccout3=DATA_ADCacc3/512;
+// 	if (DATA_ADCaccout2<4900)//0bb2 0x1200 5200
+// 	{
+// 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+// 	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready	
+// 	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+// 	}
+// 	else
+// 	{
+// 	LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
+// 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_9); //ready
+// 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
+// 	}
   /////////////////////////////////////////////////////////////
-  int val_avg=300;
+  int val_avg=1;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
@@ -833,7 +855,18 @@ ADC_SCAN ();
 		rx1_s[11]=10;
 		rx1_s[12]=1;
 		rx1_s[13]=0;
+
+      sprintf(buffer2, ">spi_rx16[0]:%d\n",spi_rx16[0]);
+      uart_1.uart_tx_data(buffer2);
+      sprintf(buffer2, ">spi_rx16[1]:%d\n",spi_rx16[1]);
+      uart_1.uart_tx_data(buffer2);
+      sprintf(buffer2, ">spi_rx16[2]:%d\n",spi_rx16[2]);
+      uart_1.uart_tx_data(buffer2);
+      sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
+      uart_1.uart_tx_data(buffer2);
   }
+
+
 }
 
       extern "C" void USART1_IRQHandler(void)
@@ -855,17 +888,68 @@ ADC_SCAN ();
              char value_T='T';
              if(USART1->DR==value_T)
              {
-                /*sprintf(buffer, "DATA_ADC[0]: %d", DATA_ADC[0]);
-                uart_1.uart_tx_data(buffer);
-                sprintf(buffer, "DATA_ADC[1]: %d", DATA_ADC[1]);
-                uart_1.uart_tx_data(buffer);
-                sprintf(buffer, "DATA_ADC[2]: %d", DATA_ADC[2]);
-                uart_1.uart_tx_data(buffer);
-                sprintf(buffer, "DATA_ADC[3]: %d", DATA_ADC[3]);
-                uart_1.uart_tx_data(buffer);*/
+                //0x120
              }
     }
 }
+
+extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
+{
+	TIM14->SR=0;
+	ptr=0;
+	gcnt++;
+
+	if (rx1[8]!=0x80)
+	{
+	if (temp_int>=temp_work+1)
+		{
+			// //baddr=DATA_ADCaccout2-4899;
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);
+		}
+	else
+	{
+		if (temp_int>=7200)
+		{
+			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
+		}
+	}
+}
+
+	LL_GPIO_ResetOutputPin(GPIOA,LL_GPIO_PIN_15);
+	LL_SPI_Enable(SPI3);
+	spi_rx16[0]=0;
+			spi_rx16[1]=0;
+			spi_rx16[2]=0;
+			spi_rx16[3]=0;
+			while (ptr<14)
+			{
+			LL_SPI_TransmitData16(SPI3,rx1_s[ptr]+256*rx1_s[ptr+1]); //0x0060
+			 while (LL_SPI_IsActiveFlag_TXE(SPI3)==0) //LL_SPI_IsActiveFlag_BSY(SPI3)
+				{
+				}
+			 while (LL_SPI_IsActiveFlag_RXNE(SPI3)==0) //LL_SPI_IsActiveFlag_BSY(SPI3)
+				{
+				}
+			 spi_rx16[ptr>>1]=LL_SPI_ReceiveData16(SPI3);
+			 ptr=ptr+2;
+			}
+			LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_15);
+			LL_SPI_Disable(SPI3);
+			cnt_v[1]=spi_rx16[1];//cnt_v[1]=spi_rx16[1];
+			cnt_v[0]=spi_rx16[1]>>8;
+			pkuc[0]=spi_rx16[2]>>12;
+			pkuc[1]=spi_rx16[2]&0x00ff;
+			pkuc[2]=(spi_rx16[2]>>8)&0x0f;
+			pkuc[3]=spi_rx16[3]&0x00ff;
+			pkuc[4]=(spi_rx16[3]>>8)&0x0f;
+			// if(spi_rx16[0]!=65535)
+			// {
+      
+			// }
+ 		return;
+	}
+
 
 void Error_Handler(void)
 {

@@ -2,3 +2,9 @@
 MapFile.map
 .pio/build/genericSTM32F405RG/firmware.elf
 .pio/build/genericSTM32F405RG/firmware.bin
+MapFile.map
+MapFile.map
+.pio/build/genericSTM32F405RG/.sconsign311.dblite
+.pio/build/genericSTM32F405RG/firmware.bin
+.pio/build/genericSTM32F405RG/firmware.elf
+*.o
