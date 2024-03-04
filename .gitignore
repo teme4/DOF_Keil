@@ -8,3 +8,5 @@ MapFile.map
 .pio/build/genericSTM32F405RG/firmware.bin
 .pio/build/genericSTM32F405RG/firmware.elf
 *.o
+*.bin
+*.dblite
