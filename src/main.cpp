@@ -9,7 +9,7 @@
 #include <vector>
 #include "math.h"
 
-uint16_t spi_rx16[4];
+uint16_t spi_rx16[14];
 volatile uint8_t rx1[18];
 volatile uint8_t rx1_s[18];
 uint8_t rx2[10] __attribute__((used));
@@ -25,12 +25,13 @@ volatile uint8_t spi2_v[5];
 volatile uint8_t lev;
 volatile uint8_t pkuc[6];
 volatile uint8_t gcnt;
-int32_t StartPageAddr = 0x08008000;
-uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
+//int32_t StartPageAddr = 0x08008000;
+//uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
 uint8_t *TxBuffer;
 uint8_t RxBuffer[100];
 uint8_t TxCounter = 0, RxCounter = 0;
-std::vector<char> TxData; // Вектор целых чисел
+
+//std::vector<char> TxData; // Вектор целых чисел
 uint16_t ctr=0;//,dt=0;
 unsigned short DATA_ADC[10];
 double vol_arr_temp[10],d_temp=0;;
@@ -52,13 +53,13 @@ char buffer2[100];
 char buffer[100];
 double temp_work=-30;
 double PID,temp_current,temp_delta,temp_i,temp_d,
-kp=28000,//4.75V
-ki=0.45,//0,5
+kp=15000,//4.75V
+ki=0.2,//0,5
 kd=0,
 P,I,D;
 
 
-uint32_t val,pwm,reg_max=kp,reg_min,dt=0;
+uint32_t val,pwm,reg_max=kp,reg_min=2000,dt=0;
 uint8_t pin_ready=9,
         led_red=11,
         led_green=10,
@@ -78,7 +79,10 @@ uint8_t pin_ready=9,
         pin_adc_6=6,
         pin_adc_7=7,
         pin_adc_8=0,
-        pin_adc_9=1;
+        pin_adc_9=1,
+        E9=13,
+        DONE=8,
+        PROG_B=2;
 
 
 gpio gpio_stm32f405;
@@ -288,7 +292,6 @@ void MX_SPI2_Init(void)
 
 static void MX_SPI3_Init(void)
 {
-
   LL_SPI_InitTypeDef SPI_InitStruct = {0};
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
@@ -335,7 +338,6 @@ void MX_TIM14_Init(void)
   RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
   NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
   NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
-
   TIM14->PSC = 0x0008;
   TIM14->ARR = 0x1000;
   TIM14->CR1 |= TIM_CR1_ARPE;
@@ -360,66 +362,6 @@ void MX_TIM3_Init(void)
 }
 
 
-static void MX_GPIO_Init(void)
-{
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD);
-
-  LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_13|LL_GPIO_PIN_14|LL_GPIO_PIN_0|LL_GPIO_PIN_1
-                          |LL_GPIO_PIN_3|LL_GPIO_PIN_4|LL_GPIO_PIN_5|LL_GPIO_PIN_6
-                          |LL_GPIO_PIN_7);
-  LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_6
-                          |LL_GPIO_PIN_8|LL_GPIO_PIN_9);// |LL_GPIO_PIN_5 |LL_GPIO_PIN_7
-  LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_11|LL_GPIO_PIN_12);
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_13|LL_GPIO_PIN_14|LL_GPIO_PIN_0|LL_GPIO_PIN_1
-                          |LL_GPIO_PIN_3|LL_GPIO_PIN_4|LL_GPIO_PIN_5|LL_GPIO_PIN_6
-                          |LL_GPIO_PIN_7;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-  
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_2|LL_GPIO_PIN_8|LL_GPIO_PIN_9;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_6
-                          |LL_GPIO_PIN_8|LL_GPIO_PIN_9; // LL_GPIO_PIN_5||LL_GPIO_PIN_7
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_11|LL_GPIO_PIN_12|LL_GPIO_PIN_15;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-}
-
 int main()
 {
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
@@ -428,15 +370,6 @@ int main()
   NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
 
   SystemClock_Config();
-  MX_GPIO_Init();
-  MX_ADC1_Init();
-  MX_DAC_Init();
-  MX_SPI2_Init();
-  MX_SPI3_Init();
-  MX_TIM14_Init();
-  MX_TIM3_Init();
-LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
-  uint32_t bias2=0,threshold2=0;
 
 //gpio gpio_stm32f405;
 //UASRT1_gpio PA9 -> Tx  PA10 -> Rx
@@ -474,10 +407,21 @@ gpio_stm32f405.gpio_init(GPIOB,pin_adc_9,gpio_type::gpio_type_pp,gpio_mode::gpio
 gpio_stm32f405.gpio_init(GPIOB,0,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_alternate,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.config_af(GPIOB,0,2);//AF1
 
+gpio_stm32f405.gpio_init(GPIOD,led_green,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//PLIS
+gpio_stm32f405.gpio_init(GPIOA,DONE,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_input,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_down);
+gpio_stm32f405.gpio_init(GPIOD,PROG_B,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+
+  MX_ADC1_Init();
+  MX_DAC_Init();
+  MX_SPI2_Init();
+  MX_SPI3_Init();
+  MX_TIM14_Init();
+  MX_TIM3_Init();
 
 uart_1.usart_init();
 
-	LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
+LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
 
 	rx1[4]=32;
 	rx0[0]=170;
@@ -488,23 +432,33 @@ uart_1.usart_init();
 	rx0[5]=64;//104;
 	rx0[6]=1;//2;//4   2 1 2 mag- 3/190 gib- 2/137
 	rx0[7]=52;//170;  //158 145 169 144 148 164 132 168 138
-	rx0[8]=0;	//128
+	rx0[8]=128;	//128
 
 
-LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
+//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
+//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
 
-   DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
-   DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
+   //DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
+   //DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
 
 
+  while(gpio_stm32f405.get_state_pin(GPIOA,DONE)==0) //PLIS is run?
+  {
+  gpio_stm32f405.set_pin_state(GPIOD,PROG_B,0); //run plis.
+  delay_ms(100);
+	gpio_stm32f405.set_pin_state(GPIOD,PROG_B,1);
+  delay_ms(100);
+  }
 
-  LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B reSET
-	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_6); //PROG_B SET
 	//	LL_SPI_Enable(SPI2);
 
+
+//Custom code
 rx1[3]=0xE0;
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
 rx1[8]=0x80;
+//Custom code
+
   while (1)
   {
    DWT_CYCCNT  = 0;
@@ -517,12 +471,14 @@ ADC_SCAN ();
 		rx1_s[0]=rx1[0];
 		if ((temp_int<=temp_work+1))
 		{
-		rx1_s[1]=temp[5000/2-1500]>>8;//DATA_ADCaccout2>>8;
-		rx1_s[2]=temp[5000/2-1500]&255;//DATA_ADCaccout2&255;
+    rx1_s[1]=temp[1000]>>8;//DATA_ADCaccout2>>8;
+		rx1_s[2]=temp[1000]&255;//DATA_ADCaccout2&255;
+		// rx1_s[1]=temp[5000/2-1500]>>8;//DATA_ADCaccout2>>8;
+		// rx1_s[2]=temp[5000/2-1500]&255;//DATA_ADCaccout2&255;
 		}
 		else
 		{
-			if (DATA_ADCaccout2>7000)
+			if (temp_int>-70)
 			{
 				rx1_s[1]=2;
 				rx1_s[2]=0;
@@ -554,6 +510,8 @@ ADC_SCAN ();
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
       uart_1.uart_tx_data(buffer2);
+      sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
+      uart_1.uart_tx_data(buffer2);
   }
 
 
@@ -561,17 +519,17 @@ ADC_SCAN ();
 
       extern "C" void USART1_IRQHandler(void)
       {
-    if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
-    {
-        RxBuffer[RxCounter++] = USART1->DR; // Прием данных
-             uart_1.uart_tx_byte(USART1->DR);
-             uart_1.uart_tx_byte(10);//\n
-             char value_T='T';
-             if(USART1->DR==value_T)
-             {
-                //0x120
-             }
-    }
+    // if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
+    // {
+    //     RxBuffer[RxCounter++] = USART1->DR; // Прием данных
+    //          uart_1.uart_tx_byte(USART1->DR);
+    //          uart_1.uart_tx_byte(10);//\n
+    //          char value_T='T';
+    //          if(USART1->DR==value_T)
+    //          {
+    //             //0x120
+    //          }
+    // }
 }
 
 extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
@@ -580,7 +538,7 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 	ptr=0;
 	gcnt++;
 
-	if (rx1[8]!=0x80)
+	if (rx1[8]<100)
 	{
 	if (temp_int>=temp_work+1)
 		{
@@ -590,9 +548,9 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 		}
 	else
 	{
-		if (temp_int>=7200)
+		if (temp_int<=temp_work+1)
 		{
-			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
+			 LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
 		}
 	}
 }
@@ -624,6 +582,7 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 			pkuc[2]=(spi_rx16[2]>>8)&0x0f;
 			pkuc[3]=spi_rx16[3]&0x00ff;
 			pkuc[4]=(spi_rx16[3]>>8)&0x0f;
+
  		return;
 	}
 
