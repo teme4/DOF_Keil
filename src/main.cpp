@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include "math.h"
+#include <cstdlib>
+int res = 0;
 
 uint16_t spi_rx16[14];
 volatile uint8_t rx1[18];
@@ -25,6 +27,7 @@ volatile uint8_t spi2_v[5];
 volatile uint8_t lev;
 volatile uint8_t pkuc[6];
 volatile uint8_t gcnt;
+int val_uart;
 //int32_t StartPageAddr = 0x08008000;
 //uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
 uint8_t *TxBuffer;
@@ -445,11 +448,11 @@ LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
   while(gpio_stm32f405.get_state_pin(GPIOA,DONE)==0) //PLIS is run?
   {
   gpio_stm32f405.set_pin_state(GPIOD,PROG_B,0); //run plis.
-  delay_ms(100);
+  delay_ms(1000);
 	gpio_stm32f405.set_pin_state(GPIOD,PROG_B,1);
-  delay_ms(100);
+  delay_ms(1000);
   }
-
+  delay_ms(1000);
 	//	LL_SPI_Enable(SPI2);
 
 
@@ -461,6 +464,63 @@ rx1[8]=0x80;
 
   while (1)
   {
+    //TEMPER
+    if(RxBuffer[0]==0x54 && RxBuffer[4]==42)
+    {
+int s = 1;
+int i = -1;
+res = 0;
+
+if (RxBuffer[1] == '-') {
+  s = -1;
+  i = 1;
+}
+while (RxBuffer[++i] != 42) { //iterate until the array end
+  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+}
+res = res*s; //answer: -908
+   temp_work=res;
+  RxCounter=0;   
+    }
+
+    //BIAS
+    if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42)
+    {
+int s = 1;
+int i = -1;
+res = 0;
+
+if (RxBuffer[1] ==0x52)
+ i = 1;
+
+while (RxBuffer[++i] != 42) { //iterate until the array end
+  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+}
+if(res>1023 && res<1792)
+  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, res);
+
+  RxCounter=0;
+    }
+
+     //BIAS
+    if(RxBuffer[0]==0x55 && RxBuffer[4]==42)
+    {
+//int s = 1;
+int i = 0;
+
+
+// if (RxBuffer[0] ==0x55)
+//  i = 1;
+
+while (RxBuffer[++i] != 42) { //iterate until the array end
+  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+}
+if(res>287 && res<336)
+  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, res);
+ res=0;
+  RxCounter=0;   
+    }
+
    DWT_CYCCNT  = 0;
    DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
 ADC_SCAN ();
@@ -478,7 +538,7 @@ ADC_SCAN ();
 		}
 		else
 		{
-			if (temp_int>-70)
+			if (temp_int<-70)
 			{
 				rx1_s[1]=2;
 				rx1_s[2]=0;
@@ -490,12 +550,14 @@ ADC_SCAN ();
 			}
     }
 
+DATA_ADCaccout1=747;
+DATA_ADCaccout3=4419;
 		rx1_s[3]=rx1[3];
-		rx1_s[4]=DATA_ADCaccout1>>8;
+		rx1_s[4]=DATA_ADCaccout1>>8;//
 		rx1_s[5]=DATA_ADCaccout1&255;
 		rx1_s[6]=1;
 		rx1_s[7]=3;
-		rx1_s[8]=temp[DATA_ADCaccout3/2-1500]>>8;//DATA_ADCaccout3>>8;
+		rx1_s[8]=temp[DATA_ADCaccout3/2-1500]>>8;//DATA_ADCaccout3>>8;//
 		rx1_s[9]=temp[DATA_ADCaccout3/2-1500]&255;//DATA_ADCaccout3&255;
 		rx1_s[10]=1;
 		rx1_s[11]=10;
@@ -519,17 +581,17 @@ ADC_SCAN ();
 
       extern "C" void USART1_IRQHandler(void)
       {
-    // if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
-    // {
-    //     RxBuffer[RxCounter++] = USART1->DR; // Прием данных
-    //          uart_1.uart_tx_byte(USART1->DR);
-    //          uart_1.uart_tx_byte(10);//\n
-    //          char value_T='T';
-    //          if(USART1->DR==value_T)
-    //          {
-    //             //0x120
-    //          }
-    // }
+    if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
+    {
+        RxBuffer[RxCounter++] = USART1->DR; // Прием данных
+         //    uart_1.uart_tx_byte(USART1->DR);
+         //    uart_1.uart_tx_byte(10);//\n
+             //char value_T='T';
+            //  if(USART1->DR==value_T)
+            //  {
+                
+            //  }
+    }
 }
 
 extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
