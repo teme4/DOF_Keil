@@ -9,6 +9,7 @@
 #include <vector>
 #include "math.h"
 #include <cstdlib>
+#include <iostream>
 int res = 0;
 
 uint16_t spi_rx16[14];
@@ -54,7 +55,7 @@ extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
-double temp_work=-30;
+double temp_work=-35;
 double PID,temp_current,temp_delta,temp_i,temp_d,
 kp=15000,//4.75V
 ki=0.2,//0,5
@@ -116,6 +117,23 @@ void delay_ms(uint32_t us)
     TIM8->CR1 = 0; // Р’С‹РєР»СЋС‡РµРЅРёРµ С‚Р°Р№РјРµСЂР°
 }
 
+// Функция для вычисления значения интерполированной функции в точке x
+double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
+    double result = 0.0;
+
+    for (size_t i = 0; i < x_points.size(); ++i) {
+        double term = y_points[i];
+        for (size_t j = 0; j < x_points.size(); ++j) {
+            if (i != j) {
+                term *= (x - x_points[j]) / (x_points[i] - x_points[j]);
+            }
+        }
+        result += term;
+    }
+
+    return result;
+}
+
 void delay_us(uint32_t us)
 {
     RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
@@ -157,10 +175,14 @@ void ADC_SCAN (void)
           vol_arr[i]=vol_arr_temp[i]/val_avg;
           vol_arr[i]=std::round(vol_arr[i]*1000)/1000;
         }
-  V_bias=(vol_arr[0]*234);
+      // sprintf(buffer2, ">ADC_temp:%d\n",vol_arr_temp[2]);
+      // uart_1.uart_tx_data(buffer2);
+  V_bias=(vol_arr[0]*165.631);
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]*100);
+
+ 
 
 sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
 uart_1.uart_tx_data(buffer2);
@@ -228,7 +250,11 @@ void MX_ADC1_Init(void)
  //GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
 
   /* ADC Configuration */
-  ADC1->CR1 &= ~ADC_CR1_RES;
+ //ADC1->CR1 |= 0x1<<ADC_CR1_RES_Pos;
+// 00: 12-bit (15 ADCCLK cycles)
+// 01: 10-bit (13 ADCCLK cycles)
+// 10: 8-bit (11 ADCCLK cycles)
+// 11: 6-bit (9 ADCCLK cycles)
   ADC1->CR2 &= ~ADC_CR2_ALIGN;
   ADC1->CR1 &= ~ADC_CR1_SCAN;
   ADC1->CR2 &= ~ADC_CR2_CONT;
@@ -238,9 +264,11 @@ void MX_ADC1_Init(void)
   ADC->CCR |= ADC_CCR_ADCPRE;
 
   /* ADC Channel Configuration */
-  ADC1->SQR3 &= ~ADC_SQR3_SQ1;
-  ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
-  ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
+  // ADC1->SQR3 &= ~ADC_SQR3_SQ1;
+  ADC1->SMPR2 |=0x7FFFFFF;
+   //ADC1->SMPR2 |=0x0;
+  // ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
+  // ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
 
   /* ADC Enable */
   ADC1->CR2 |= ADC_CR2_ADON;
@@ -448,13 +476,14 @@ LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
   while(gpio_stm32f405.get_state_pin(GPIOA,DONE)==0) //PLIS is run?
   {
   gpio_stm32f405.set_pin_state(GPIOD,PROG_B,0); //run plis.
-  delay_ms(1000);
+  delay_ms(5000);
 	gpio_stm32f405.set_pin_state(GPIOD,PROG_B,1);
-  delay_ms(1000);
+  delay_ms(5000);
   }
   delay_ms(1000);
 	//	LL_SPI_Enable(SPI2);
-
+std::vector<double> x_points = {256, 512, 1024, 2048, 4096};
+std::vector<double> y_points = {24, 29.5, 35.5, 41, 47.7};
 
 //Custom code
 rx1[3]=0xE0;
@@ -480,26 +509,33 @@ while (RxBuffer[++i] != 42) { //iterate until the array end
 }
 res = res*s; //answer: -908
    temp_work=res;
-  RxCounter=0;   
+   RxCounter=0;
+   for(int i=0;i<20;i++)
+   {
+    RxBuffer[i]=0;
+   }
     }
 
     //BIAS
-    if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42)
+    if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42||RxBuffer[5]==42)
     {
-int s = 1;
-int i = -1;
+
+int i = 1;
 res = 0;
 
-if (RxBuffer[1] ==0x52)
- i = 1;
+
 
 while (RxBuffer[++i] != 42) { //iterate until the array end
   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
 }
-if(res>1023 && res<1792)
+if(res>100 && res<1792)
   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, res);
 
   RxCounter=0;
+     for(int i=0;i<20;i++)
+   {
+    RxBuffer[i]=0;
+   }
     }
 
      //BIAS
@@ -518,7 +554,11 @@ while (RxBuffer[++i] != 42) { //iterate until the array end
 if(res>287 && res<336)
   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, res);
  res=0;
-  RxCounter=0;   
+  RxCounter=0;
+     for(int i=0;i<20;i++)
+   {
+    RxBuffer[i]=0;
+   }
     }
 
    DWT_CYCCNT  = 0;
@@ -564,16 +604,29 @@ DATA_ADCaccout3=4419;
 		rx1_s[12]=1;
 		rx1_s[13]=0;
 
-      sprintf(buffer2, ">spi_rx16[0]:%d\n",spi_rx16[0]);
+     /*sprintf(buffer2, ">spi_rx16[0]:%d\n",spi_rx16[0]);
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[1]:%d\n",spi_rx16[1]);
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[2]:%d\n",spi_rx16[2]);
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
-      uart_1.uart_tx_data(buffer2);
+      uart_1.uart_tx_data(buffer2);*/
       sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
       uart_1.uart_tx_data(buffer2);
+        sprintf(buffer2, ">U:%d\n",DAC1->DHR12R1);
+       uart_1.uart_tx_data(buffer2);
+         sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R2);
+       uart_1.uart_tx_data(buffer2);
+
+       
+
+    // Точка, для которой нужно вычислить значение функции
+    double x = DAC1->DHR12R2;
+    // Вычисление значения интерполированной функции в точке x
+    double y = lagrangeInterpolation(x, x_points, y_points);
+      sprintf(buffer2, ">V_bias_new:%f\n",y);
+       uart_1.uart_tx_data(buffer2);
   }
 
 

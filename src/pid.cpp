@@ -10,6 +10,8 @@ sprintf(buffer, ">temp_delta:%-8.2f\n",temp_delta);
 uart_1.uart_tx_data(buffer);
 DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
 dt=DWT_CYCCNT/1000;
+sprintf(buffer, ">dt:%d\n",dt);
+uart_1.uart_tx_data(buffer);
 integral+=temp_delta*dt*ki;
 sprintf(buffer, ">PID_I:%-8.2f\n",integral*ki);
  uart_1.uart_tx_data(buffer);
