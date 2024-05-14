@@ -5,8 +5,8 @@
 #include "delay.hpp"
 #include "stdio.h"
 #include "usart.hpp"
-
-extern double pwm,PID,temp_current,temp_delta,temp_i,temp_int,temp_d,
+extern volatile double temp_int;
+extern double pwm,PID,temp_current,temp_delta,temp_i,temp_d,
 kp,
 ki,
 kd,

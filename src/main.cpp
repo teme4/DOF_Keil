@@ -11,8 +11,11 @@
 #include <cstdlib>
 #include <iostream>
 
-//#include "bias2.hpp"
-// extern double bias2[500] [2];
+#include "bias2.hpp"
+extern double temp_2[500];
+extern uint16_t bias_2[500];
+
+
 
 int res = 0;
 
@@ -67,7 +70,8 @@ uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
 double temp_work=-20;
-double pwm,PID,temp_current,temp_delta,temp_i,temp_int,temp_d,
+volatile double temp_int;
+ double pwm,PID,temp_current,temp_delta,temp_i,temp_d,
 kp=100,
 ki=0.25,
 kd=5,
@@ -195,8 +199,8 @@ void ADC_SCAN (void)
   temp_rad=_TransferFunction(vol_arr[9]*100);
 
 
-// sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
-// uart_1.uart_tx_data(buffer2);
+sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
+uart_1.uart_tx_data(buffer2);
 // sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
 // uart_1.uart_tx_data(buffer2);
 // sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
@@ -589,12 +593,12 @@ std::vector<double> y_points = {24, 29.5, 35.5, 41, 47.7};
 
 //Custom code
 rx1[3]=0xE0;
-LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x5bb);//напряжение
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);//напряжение
  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12c);//порог
-rx1[8]=0x80;
+rx1[8]=0x00;
 //Custom code
 
-resolve(-25,-35,-47,1545,1493,1423,0.1);
+//resolve(-25,-35,-47,1545,1493,1423,0.1);
 
 
 
@@ -608,72 +612,72 @@ resolve(-25,-35,-47,1545,1493,1423,0.1);
    //pid_int.start(temp_work);
     //TEMPER
 
-    if(RxBuffer[0]==0x54 && RxBuffer[4]==42)
-    {
-int s = 1;
-int i = -1;
-res = 0;
+//     if(RxBuffer[0]==0x54 && RxBuffer[4]==42)
+//     {
+// int s = 1;
+// int i = -1;
+// res = 0;
 
-if (RxBuffer[1] == '-') {
-  s = -1;
-  i = 1;
-}
-while (RxBuffer[++i] != 42) { //iterate until the array end
-  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-}
-res = res*s; //answer: -908
-   temp_work=res;
-   RxCounter=0;
-   for(int i=0;i<20;i++)
-   {
-    RxBuffer[i]=0;
-   }
-    }
+// if (RxBuffer[1] == '-') {
+//   s = -1;
+//   i = 1;
+// }
+// while (RxBuffer[++i] != 42) { //iterate until the array end
+//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+// }
+// res = res*s; //answer: -908
+//    temp_work=res;
+//    RxCounter=0;
+//    for(int i=0;i<20;i++)
+//    {
+//     RxBuffer[i]=0;
+//    }
+//     }
 
-    //BIAS
-    if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42||RxBuffer[5]==42)
-    {
+//     //BIAS
+//     if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42||RxBuffer[5]==42)
+//     {
 
-int i = 1;
-res = 0;
-
-
-
-while (RxBuffer[++i] != 42) { //iterate until the array end
-  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-}
-if(res>100 && res<1792)
-  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, res);
-
-  RxCounter=0;
-     for(int i=0;i<20;i++)
-   {
-    RxBuffer[i]=0;
-   }
-    }
-
-     //BIAS
-    if(RxBuffer[0]==0x55 && RxBuffer[4]==42)
-    {
-//int s = 1;
-int i = 0;
+// int i = 1;
+// res = 0;
 
 
-// if (RxBuffer[0] ==0x55)
-//  i = 1;
 
-while (RxBuffer[++i] != 42) { //iterate until the array end
-  res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-}
-if(res>287 && res<336)
-  LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, res);
- res=0;
-  RxCounter=0;
-     for(int i=0;i<20;i++)
-   {
-    RxBuffer[i]=0;
-   }
-    }
+// while (RxBuffer[++i] != 42) { //iterate until the array end
+//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+// }
+// if(res>100 && res<1792)
+//   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, res);
+
+//   RxCounter=0;
+//      for(int i=0;i<20;i++)
+//    {
+//     RxBuffer[i]=0;
+//    }
+//     }
+
+//      //BIAS
+//     if(RxBuffer[0]==0x55 && RxBuffer[4]==42)
+//     {
+// //int s = 1;
+// int i = 0;
+
+
+// // if (RxBuffer[0] ==0x55)
+// //  i = 1;
+
+// while (RxBuffer[++i] != 42) { //iterate until the array end
+//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
+// }
+// if(res>287 && res<336)
+//   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, res);
+//  res=0;
+//   RxCounter=0;
+//      for(int i=0;i<20;i++)
+//    {
+//     RxBuffer[i]=0;
+//    }
+//     }
 
 
  //pid_int.calc_PID(temp_work,27000,0,0);
@@ -722,12 +726,12 @@ DATA_ADCaccout3=4419;
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
       uart_1.uart_tx_data(buffer2);*/
-      // sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
-      // uart_1.uart_tx_data(buffer2);
-      //   sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R1);
-      //  uart_1.uart_tx_data(buffer2);
-      //    sprintf(buffer2, ">U:%d\n",DAC1->DHR12R2);
-      //  uart_1.uart_tx_data(buffer2);
+      sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
+      uart_1.uart_tx_data(buffer2);
+        sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R1);
+       uart_1.uart_tx_data(buffer2);
+         sprintf(buffer2, ">U:%d\n",DAC1->DHR12R2);
+       uart_1.uart_tx_data(buffer2);
 
        
 
@@ -770,26 +774,30 @@ extern "C" void TIM1_TRG_COM_TIM11_IRQHandler(void)
 
 extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 {
-   int i_temp=0;
+  int i_temp=0;
 	TIM14->SR=0;
 	ptr=0;
 	gcnt++;
 
 	if (rx1[8]<100)
 	{
-	if (temp_int>=temp_work+1)
+	if (temp_int<=temp_work+1)
 		{
 			// //baddr=DATA_ADCaccout2-4899;
 			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));
 			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);
-		 for(int i=0;i<500;i++)
+		temp_int=round(temp_int*10)/10;
+     for(int i=0;i<500;i++)
      {
-       // if(temp_int==bias2[0][i]/10)
+        if(temp_int==temp_2[i])
         {
           i_temp=i;
+           LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2,bias_2[i_temp]);
+          break;
         }
      }
-   
+ 
+
     	//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, bias2[][]);
     
     }
@@ -843,7 +851,7 @@ void Error_Handler(void)
   }
 
 }
-
+#define USE_FULL_ASSERT
 #ifdef  USE_FULL_ASSERT
 
 void assert_failed(uint8_t *file, uint32_t line)
