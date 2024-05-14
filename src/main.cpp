@@ -10,7 +10,18 @@
 #include "math.h"
 #include <cstdlib>
 #include <iostream>
+
+//#include "bias2.hpp"
+// extern double bias2[500] [2];
+
 int res = 0;
+
+
+
+
+#define UART_LOG_XY
+//#define UART_LOG_XY_GRAPH
+//#define UART_LOG_XY_TABLE
 
 uint16_t spi_rx16[14];
 volatile uint8_t rx1[18];
@@ -55,15 +66,14 @@ extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 char buffer2[100];
 char buffer[100];
-double temp_work=-35;
-double PID,temp_current,temp_delta,temp_i,temp_d,
-kp=15000,//4.75V
-ki=0.2,//0,5
-kd=0,
+double temp_work=-20;
+double pwm,PID,temp_current,temp_delta,temp_i,temp_int,temp_d,
+kp=100,
+ki=0.25,
+kd=5,
 P,I,D;
 
-
-uint32_t val,pwm,reg_max=kp,reg_min=2000,dt=0;
+uint32_t val,reg_max=200,reg_min=0,dt=0;
 uint8_t pin_ready=9,
         led_red=11,
         led_green=10,
@@ -93,8 +103,10 @@ gpio gpio_stm32f405;
 usart uart_1;
 pid pid_int;
 
+
+
 double volt=0;
-double temp_int,temp_ext=0,temp_rad=0,V_bias=0;
+double temp_ext=0,temp_rad=0,V_bias=0;
 
 double _TransferFunction(double voltage)
   {
@@ -117,22 +129,22 @@ void delay_ms(uint32_t us)
     TIM8->CR1 = 0; // Р’С‹РєР»СЋС‡РµРЅРёРµ С‚Р°Р№РјРµСЂР°
 }
 
-// Функция для вычисления значения интерполированной функции в точке x
-double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
-    double result = 0.0;
+// // Функция для вычисления значения интерполированной функции в точке x
+// double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
+//     double result = 0.0;
 
-    for (size_t i = 0; i < x_points.size(); ++i) {
-        double term = y_points[i];
-        for (size_t j = 0; j < x_points.size(); ++j) {
-            if (i != j) {
-                term *= (x - x_points[j]) / (x_points[i] - x_points[j]);
-            }
-        }
-        result += term;
-    }
+//     for (size_t i = 0; i < x_points.size(); ++i) {
+//         double term = y_points[i];
+//         for (size_t j = 0; j < x_points.size(); ++j) {
+//             if (i != j) {
+//                 term *= (x - x_points[j]) / (x_points[i] - x_points[j]);
+//             }
+//         }
+//         result += term;
+//     }
 
-    return result;
-}
+//     return result;
+// }
 
 void delay_us(uint32_t us)
 {
@@ -152,7 +164,7 @@ void delay_us(uint32_t us)
 
 void ADC_SCAN (void)
 {
-  int val_avg=1;
+  int val_avg=1000;
   for(int z=0;z<10;z++)
   {
    vol_arr_temp[z]=0;
@@ -167,31 +179,30 @@ void ADC_SCAN (void)
 
           while(!(ADC1->SR & ADC_SR_EOC)){}
           vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
-          vol_arr_temp[j]=std::round(vol_arr_temp[j]*1000)/1000;
+          vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
         }
         }
         for(int i=0;i<10;i++)
         {
           vol_arr[i]=vol_arr_temp[i]/val_avg;
-          vol_arr[i]=std::round(vol_arr[i]*1000)/1000;
+          vol_arr[i]=std::round(vol_arr[i]*100000)/100000;
         }
       // sprintf(buffer2, ">ADC_temp:%d\n",vol_arr_temp[2]);
       // uart_1.uart_tx_data(buffer2);
-  V_bias=(vol_arr[0]*165.631);
+  V_bias=((vol_arr[0])*32.8);//
   temp_int=_TransferFunction(vol_arr[2]);
   temp_ext=_TransferFunction(vol_arr[6]*2);
   temp_rad=_TransferFunction(vol_arr[9]*100);
 
- 
 
-sprintf(buffer2, ">temp_int:%-8.2f\n",temp_int);
-uart_1.uart_tx_data(buffer2);
-sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
-uart_1.uart_tx_data(buffer2);
-sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
-uart_1.uart_tx_data(buffer2);
-sprintf(buffer2, ">v_bias:%-8.2f\n",V_bias);
-uart_1.uart_tx_data(buffer2);
+// sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
+// uart_1.uart_tx_data(buffer2);
+// sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
+// uart_1.uart_tx_data(buffer2);
+// sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
+// uart_1.uart_tx_data(buffer2);
+// sprintf(buffer2, ">v_bias:%-8.2f\n",V_bias);
+// uart_1.uart_tx_data(buffer2);
 	if (temp_int>=temp_work+1)
 	{
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
@@ -205,39 +216,66 @@ uart_1.uart_tx_data(buffer2);
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 }
-
 void SystemClock_Config(void)
 {
-  // РЈСЃС‚Р°РЅРѕРІРєР° Р·Р°РґРµСЂР¶РєРё Flash
-  FLASH->ACR &= ~FLASH_ACR_LATENCY;
-  while ((FLASH->ACR & FLASH_ACR_LATENCY) != 0)
+  LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
+  while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_0)
   {
   }
+  LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
+  LL_RCC_HSI_SetCalibTrimming(16);
+  LL_RCC_HSI_Enable();
 
-  // Р’РєР»СЋС‡РµРЅРёРµ HSI
-  RCC->CR |= RCC_CR_HSION;
-  while ((RCC->CR & RCC_CR_HSIRDY) == 0)
+   /* Wait till HSI is ready */
+  while(LL_RCC_HSI_IsReady() != 1)
   {
+
   }
+  LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+  LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
+  LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
 
-  // РЈСЃС‚Р°РЅРѕРІРєР° РїСЂРµРґРґРµР»РёС‚РµР»РµР№ С€РёРЅ
-  RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
-
-  // РЈСЃС‚Р°РЅРѕРІРєР° РёСЃС‚РѕС‡РЅРёРєР° СЃРёСЃС‚РµРјРЅРѕРіРѕ С‚Р°РєС‚РѕРІРѕРіРѕ СЃРёРіРЅР°Р»Р°
-  RCC->CFGR &= ~RCC_CFGR_SW;
-  RCC->CFGR |= RCC_CFGR_SW_HSI;
-  while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
+   /* Wait till System clock is ready */
+  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
   {
+
   }
-
-  // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ SysTick
-  SysTick->LOAD = 16000000 - 1;
-  SysTick->VAL = 0;
-  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
-
-  // РЈСЃС‚Р°РЅРѕРІРєР° SystemCoreClock
-  SystemCoreClock = 16000000;
+  LL_Init1msTick(16000000);
+  LL_SetSystemCoreClock(16000000);
 }
+// void SystemClock_Config(void)
+// {
+//   // РЈСЃС‚Р°РЅРѕРІРєР° Р·Р°РґРµСЂР¶РєРё Flash
+//   FLASH->ACR &= ~FLASH_ACR_LATENCY;
+//   while ((FLASH->ACR & FLASH_ACR_LATENCY) != 0)
+//   {
+//   }
+
+//   // Р’РєР»СЋС‡РµРЅРёРµ HSI
+//   RCC->CR |= RCC_CR_HSION;
+//   while ((RCC->CR & RCC_CR_HSIRDY) == 0)
+//   {
+//   }
+
+//   // РЈСЃС‚Р°РЅРѕРІРєР° РїСЂРµРґРґРµР»РёС‚РµР»РµР№ С€РёРЅ
+//   RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+
+//   // РЈСЃС‚Р°РЅРѕРІРєР° РёСЃС‚РѕС‡РЅРёРєР° СЃРёСЃС‚РµРјРЅРѕРіРѕ С‚Р°РєС‚РѕРІРѕРіРѕ СЃРёРіРЅР°Р»Р°
+//   RCC->CFGR &= ~RCC_CFGR_SW;
+//   RCC->CFGR |= RCC_CFGR_SW_HSI;
+//   while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
+//   {
+//   }
+
+//   // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ SysTick
+//   SysTick->LOAD = 16000000 - 1;
+//   SysTick->VAL = 0;
+//   SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+
+//   // РЈСЃС‚Р°РЅРѕРІРєР° SystemCoreClock
+//   SystemCoreClock = 16000000;
+// }
 void MX_ADC1_Init(void)
 {
   /* Peripheral clock enable */
@@ -265,8 +303,8 @@ void MX_ADC1_Init(void)
 
   /* ADC Channel Configuration */
   // ADC1->SQR3 &= ~ADC_SQR3_SQ1;
-  ADC1->SMPR2 |=0x7FFFFFF;
-   //ADC1->SMPR2 |=0x0;
+  //ADC1->SMPR2 |=0x7FFFFFF;
+   ADC1->SMPR2 |=0x0;
   // ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
   // ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
 
@@ -381,17 +419,72 @@ void MX_TIM14_Init(void)
   TIM14->CR1 |= TIM_CR1_CEN;
 }
 
+void MX_TIM11_Init(void)
+{
+  RCC->APB2ENR |= RCC_APB2ENR_TIM11EN;
+  NVIC_SetPriority(TIM1_TRG_COM_TIM11_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM1_TRG_COM_TIM11_IRQn);
+  TIM11->PSC = 0x0008;
+  TIM11->ARR = 0x200;
+  TIM11->CR1 |= TIM_CR1_ARPE;
+  TIM11->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_0;
+  TIM11->CCER &= ~TIM_CCER_CC1E;
+  TIM11->CCR1 = 0;
+  TIM11->CCER &= ~TIM_CCER_CC1P;
+  TIM11->BDTR |= TIM_BDTR_MOE;
+  TIM11->DIER |= TIM_DIER_UIE;
+  TIM11->CR1 |= TIM_CR1_CEN;
+}
+
 void MX_TIM3_Init(void)
 {
     RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3 clock
-    TIM3->PSC = 16 - 1; // Set prescaler to 16 (SystemCoreClock = 16MHz)
-    TIM3->ARR = 50000 - 1; // Set auto-reload to 10
+    TIM3->PSC = 8-1; // Set prescaler to 16 (SystemCoreClock = 16MHz)
+    TIM3->ARR = 1000; // Set auto-reload to 10
     TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
     TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
-    TIM3->CCR3 =kp;// 44000; // Set the duty cycle to 50%
+    TIM3->CCR3 =0;// 44000; // Set the duty cycle to 50%
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
+volatile double count_1,count_2,x[1500],y[1500];
+
+void resolve(double x1,double x2,double x3,double y1,double y2,double y3,double accuracy)
+{
+  for ( int i = -50; i<count_1; i++)
+   {
+    count_1=(-(x2-x1)/accuracy);//0.1
+    x[i]=x1-i*accuracy;
+    y[i]=y2+((y1-y2)/(x1-x2))*(x[i]-x2);
+     #ifdef UART_LOG_XY_GRAPH
+    sprintf(buffer,">Bias=f(temp):%f:%f|xy\n", x[i],y[i]);
+    uart_1.uart_tx_data(buffer);
+   #endif
+  #ifdef UART_LOG_XY_TABLE
+   sprintf(buffer,"{%-8.1f,%d},\n", x[i],(int)y[i]);
+   // sprintf(buffer,"x=%f,y=:%f|xy\n", x[i],y[i]);
+    uart_1.uart_tx_data(buffer);
+   // delay_ms(200);
+   #endif
+   }
+
+   for (int  i =0; i<count_2+200; i++)
+   {
+    count_2=(-(x3-x2)/accuracy);
+    x[i]=x2-i*accuracy;
+    y[i]=y3+((y2-y3)/(x2-x3))*(x[i]-x3);
+     #ifdef UART_LOG_XY_GRAPH
+    sprintf(buffer,">Bias=f(temp):%f:%f|xy\n", x[i],y[i]);
+    uart_1.uart_tx_data(buffer);
+   #endif
+     #ifdef UART_LOG_XY_TABLE
+  sprintf(buffer,"{%-8.1f,%d},\n", x[i],(int)y[i]);
+    uart_1.uart_tx_data(buffer);
+    
+   #endif
+   }
+// delay_ms(200);
+}
 
 int main()
 {
@@ -445,12 +538,10 @@ gpio_stm32f405.gpio_init(GPIOD,PROG_B,gpio_type::gpio_type_pp,gpio_mode::gpio_mo
 
   MX_ADC1_Init();
   MX_DAC_Init();
-  MX_SPI2_Init();
   MX_SPI3_Init();
-  MX_TIM14_Init();
-  MX_TIM3_Init();
 
-uart_1.usart_init();
+
+
 
 LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
 
@@ -480,20 +571,43 @@ LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
 	gpio_stm32f405.set_pin_state(GPIOD,PROG_B,1);
   delay_ms(5000);
   }
+
+  
   delay_ms(1000);
+  uart_1.usart_init();
+   // MX_SPI2_Init();
+      MX_TIM11_Init();
+  MX_TIM14_Init();
+  MX_TIM3_Init();
+
+SystemCoreClockUpdate();
+
+
 	//	LL_SPI_Enable(SPI2);
 std::vector<double> x_points = {256, 512, 1024, 2048, 4096};
 std::vector<double> y_points = {24, 29.5, 35.5, 41, 47.7};
 
 //Custom code
 rx1[3]=0xE0;
-LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x5bb);//напряжение
+ LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12c);//порог
 rx1[8]=0x80;
 //Custom code
 
+resolve(-25,-35,-47,1545,1493,1423,0.1);
+
+
+
   while (1)
   {
+
+
+   DWT_CYCCNT  = 0;
+   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+   ADC_SCAN();
+   //pid_int.start(temp_work);
     //TEMPER
+
     if(RxBuffer[0]==0x54 && RxBuffer[4]==42)
     {
 int s = 1;
@@ -561,13 +675,9 @@ if(res>287 && res<336)
    }
     }
 
-   DWT_CYCCNT  = 0;
-   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
-ADC_SCAN ();
- pid_int.start(temp_work);
-   
 
-  
+ //pid_int.calc_PID(temp_work,27000,0,0);
+
 		rx1_s[0]=rx1[0];
 		if ((temp_int<=temp_work+1))
 		{
@@ -612,21 +722,23 @@ DATA_ADCaccout3=4419;
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
       uart_1.uart_tx_data(buffer2);*/
-      sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
-      uart_1.uart_tx_data(buffer2);
-        sprintf(buffer2, ">U:%d\n",DAC1->DHR12R1);
-       uart_1.uart_tx_data(buffer2);
-         sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R2);
-       uart_1.uart_tx_data(buffer2);
+      // sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
+      // uart_1.uart_tx_data(buffer2);
+      //   sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R1);
+      //  uart_1.uart_tx_data(buffer2);
+      //    sprintf(buffer2, ">U:%d\n",DAC1->DHR12R2);
+      //  uart_1.uart_tx_data(buffer2);
 
        
 
     // Точка, для которой нужно вычислить значение функции
-    double x = DAC1->DHR12R2;
+   // double x = DAC1->DHR12R2;
     // Вычисление значения интерполированной функции в точке x
-    double y = lagrangeInterpolation(x, x_points, y_points);
-      sprintf(buffer2, ">V_bias_new:%f\n",y);
-       uart_1.uart_tx_data(buffer2);
+   // double y = lagrangeInterpolation(x, x_points, y_points);
+      // sprintf(buffer2, ">V_bias_new:%f\n",y);
+      //  uart_1.uart_tx_data(buffer2);
+
+
   }
 
 
@@ -642,13 +754,23 @@ DATA_ADCaccout3=4419;
              //char value_T='T';
             //  if(USART1->DR==value_T)
             //  {
-                
+
             //  }
     }
 }
 
+extern "C" void TIM1_TRG_COM_TIM11_IRQHandler(void)
+{
+   TIM11->SR=0;//reset flag
+
+
+   //pid_int.calc_PID(temp_work,27000,0,0);
+}
+
+
 extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 {
+   int i_temp=0;
 	TIM14->SR=0;
 	ptr=0;
 	gcnt++;
@@ -660,7 +782,17 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 			// //baddr=DATA_ADCaccout2-4899;
 			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));
 			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);
-		}
+		 for(int i=0;i<500;i++)
+     {
+       // if(temp_int==bias2[0][i]/10)
+        {
+          i_temp=i;
+        }
+     }
+   
+    	//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, bias2[][]);
+    
+    }
 	else
 	{
 		if (temp_int<=temp_work+1)
