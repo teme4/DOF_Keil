@@ -2,7 +2,7 @@
 
 void sys_delay_us(uint32_t us)
 {
-   int32_t us_count_tick =  us * (16000000/1000000);
+   uint32_t us_count_tick =  us * (16000000/1000000);
    //разрешаем использовать счётчик
    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
    //обнуляем значение счётного регистра
@@ -16,7 +16,7 @@ void sys_delay_us(uint32_t us)
 
 void sys_delay_ms(uint32_t ms)
 {
-   int32_t ms_count_tick =  ms * (16000000/1000);
+   uint32_t ms_count_tick =  ms * (16000000/1000);
    //разрешаем использовать счётчик
    SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
    //обнуляем значение счётного регистра

@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "main.hpp": "c"
+        "main.hpp": "c",
+        "stm32_assert.h": "c"
     }
 }

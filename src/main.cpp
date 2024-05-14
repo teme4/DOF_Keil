@@ -23,7 +23,7 @@ int res = 0;
 
 
 #define UART_LOG_XY
-//#define UART_LOG_XY_GRAPH
+#define UART_LOG_XY_GRAPH
 //#define UART_LOG_XY_TABLE
 
 uint16_t spi_rx16[14];
@@ -67,7 +67,7 @@ volatile unsigned int DATA_ADCaccoutx;
 extern volatile unsigned short temp[2001];
 
 uint8_t rx0[9];
-char buffer2[100];
+char buffer2[500];
 char buffer[100];
 double temp_work=-20;
 volatile double temp_int;
@@ -76,6 +76,11 @@ kp=100,
 ki=0.25,
 kd=5,
 P,I,D;
+
+ double x__,y__;
+
+
+
 
 uint32_t val,reg_max=200,reg_min=0,dt=0;
 uint8_t pin_ready=9,
@@ -133,22 +138,22 @@ void delay_ms(uint32_t us)
     TIM8->CR1 = 0; // Р’С‹РєР»СЋС‡РµРЅРёРµ С‚Р°Р№РјРµСЂР°
 }
 
-// // Функция для вычисления значения интерполированной функции в точке x
-// double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
-//     double result = 0.0;
+// Функция для вычисления значения интерполированной функции в точке x
+double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
+    double result = 0.0;
 
-//     for (size_t i = 0; i < x_points.size(); ++i) {
-//         double term = y_points[i];
-//         for (size_t j = 0; j < x_points.size(); ++j) {
-//             if (i != j) {
-//                 term *= (x - x_points[j]) / (x_points[i] - x_points[j]);
-//             }
-//         }
-//         result += term;
-//     }
+    for (size_t i = 0; i < x_points.size(); ++i) {
+        double term = y_points[i];
+        for (size_t j = 0; j < x_points.size(); ++j) {
+            if (i != j) {
+                term *= (x - x_points[j]) / (x_points[i] - x_points[j]);
+            }
+        }
+        result += term;
+    }
 
-//     return result;
-// }
+    return result;
+}
 
 void delay_us(uint32_t us)
 {
@@ -588,17 +593,17 @@ SystemCoreClockUpdate();
 
 
 	//	LL_SPI_Enable(SPI2);
-std::vector<double> x_points = {256, 512, 1024, 2048, 4096};
-std::vector<double> y_points = {24, 29.5, 35.5, 41, 47.7};
+std::vector<double> y_points{1423, 1493, 1545};
+std::vector<double> x_points{-47, -35, -25};
 
 //Custom code
 rx1[3]=0xE0;
 LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);//напряжение
- LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12c);//порог
+ LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12e);//порог
 rx1[8]=0x00;
 //Custom code
 
-//resolve(-25,-35,-47,1545,1493,1423,0.1);
+//resolve(-25,-35,-47,1535,1485,1423,0.1);
 
 
 
@@ -726,21 +731,27 @@ DATA_ADCaccout3=4419;
       uart_1.uart_tx_data(buffer2);
       sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
       uart_1.uart_tx_data(buffer2);*/
-      sprintf(buffer2, ">count:%d\n",(spi_rx16[1]*65535+spi_rx16[0])/2);
+      sprintf(buffer2, ">count:%d\n", static_cast<int>(((static_cast<uint32_t>(spi_rx16[1])<<16) + static_cast<uint32_t>(spi_rx16[0]))/2));
       uart_1.uart_tx_data(buffer2);
-        sprintf(buffer2, ">TR:%d\n",DAC1->DHR12R1);
+        sprintf(buffer2, ">TR:%d\n", static_cast<int>(DAC1->DHR12R1));
        uart_1.uart_tx_data(buffer2);
-         sprintf(buffer2, ">U:%d\n",DAC1->DHR12R2);
+         sprintf(buffer2, ">U:%d\n", static_cast<int>(DAC1->DHR12R2));
        uart_1.uart_tx_data(buffer2);
 
        
 
-    // Точка, для которой нужно вычислить значение функции
-   // double x = DAC1->DHR12R2;
-    // Вычисление значения интерполированной функции в точке x
-   // double y = lagrangeInterpolation(x, x_points, y_points);
-      // sprintf(buffer2, ">V_bias_new:%f\n",y);
-      //  uart_1.uart_tx_data(buffer2);
+   // Точка, для которой нужно вычислить значение функции
+//     for(int i=0;i<500;i++)
+//     {
+//  // Вычисление значения интерполированной функции в точке x
+//    x__ = temp_2[i];
+//     y__ = lagrangeInterpolation(x__, x_points, y_points);
+//        sprintf(buffer2, ">V_bias_new:%f\n",y__);
+//         uart_1.uart_tx_data(buffer2);
+//     }
+//    temp_2[0]=0;
+
+   
 
 
   }
@@ -851,12 +862,3 @@ void Error_Handler(void)
   }
 
 }
-#define USE_FULL_ASSERT
-#ifdef  USE_FULL_ASSERT
-
-void assert_failed(uint8_t *file, uint32_t line)
-{
-int k=0;
-k++;
-}
-#endif /* USE_FULL_ASSERT */

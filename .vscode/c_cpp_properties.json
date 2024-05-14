@@ -39,6 +39,7 @@
                 "STM32F405xx",
                 "STM32F4xx",
                 "USE_FULL_LL_DRIVER",
+                "USE_FULL_ASSERT",
                 "F_CPU=168000000L",
                 ""
             ],
