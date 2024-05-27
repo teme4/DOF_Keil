@@ -19,9 +19,6 @@ extern uint16_t bias_2[500];
 
 int res = 0;
 
-
-
-
 #define UART_LOG_XY
 #define UART_LOG_XY_GRAPH
 //#define UART_LOG_XY_TABLE
@@ -43,8 +40,6 @@ volatile uint8_t lev;
 volatile uint8_t pkuc[6];
 volatile uint8_t gcnt;
 int val_uart;
-//int32_t StartPageAddr = 0x08008000;
-//uint64_t Data[6]= {0x31111, 0x42222, 0x3333, 0x4444, 0x5555, 0x6666};
 uint8_t *TxBuffer;
 uint8_t RxBuffer[100];
 uint8_t TxCounter = 0, RxCounter = 0;
@@ -52,7 +47,7 @@ uint8_t TxCounter = 0, RxCounter = 0;
 //std::vector<char> TxData; // Вектор целых чисел
 uint16_t ctr=0;//,dt=0;
 unsigned short DATA_ADC[10];
-double vol_arr_temp[10],d_temp=0;;
+double vol_arr_temp[1000],d_temp=0;;
 double vol_arr[10];
 
 unsigned int DATA_ADCacc;
@@ -69,20 +64,20 @@ extern volatile unsigned short temp[2001];
 uint8_t rx0[9];
 char buffer2[500];
 char buffer[100];
-double temp_work=-20;
+volatile double temp_work=-30;
 volatile double temp_int;
  double pwm,PID,temp_current,temp_delta,temp_i,temp_d,
-kp=100,
-ki=0.25,
-kd=5,
+kp=250,//15
+ki=0.5,//0,25
+kd=1,//2
 P,I,D;
 
- double x__,y__;
+ double x__[500],y__[500];
 
 
 
 
-uint32_t val,reg_max=200,reg_min=0,dt=0;
+uint32_t val,reg_max=999,reg_min=1,dt=0;
 uint8_t pin_ready=9,
         led_red=11,
         led_green=10,
@@ -105,7 +100,8 @@ uint8_t pin_ready=9,
         pin_adc_9=1,
         E9=13,
         DONE=8,
-        PROG_B=2;
+        PROG_B=2,
+        Pin_Reset=4;
 
 
 gpio gpio_stm32f405;
@@ -122,21 +118,21 @@ double _TransferFunction(double voltage)
       return(-1481.96 + sqrt((2.1962 * pow(10, 6)) + (1.8639 - voltage) / (3.88 * pow(10, -6))));
   }
 
-void delay_ms(uint32_t us)
-{
-    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
-    TIM8->PSC = 0; // Настройка предделителя
-    TIM8->ARR = 8000-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
-    TIM8->CNT = 0; // Сброс счетчика
-    TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
+// void delay_ms(uint32_t us)
+// {
+//     RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
+//     TIM8->PSC = 0; // Настройка предделителя
+//     TIM8->ARR = 8000-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
+//     TIM8->CNT = 0; // Сброс счетчика
+//     TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
 
-    while(us--)
-    {
-        while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
-        TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
-    }
-    TIM8->CR1 = 0; // Выключение таймера
-}
+//     while(us--)
+//     {
+//         while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
+//         TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
+//     }
+//     TIM8->CR1 = 0; // Выключение таймера
+// }
 
 // ������� ��� ���������� �������� ����������������� ������� � ����� x
 double lagrangeInterpolation(double x, const std::vector<double>& x_points, const std::vector<double>& y_points) {
@@ -155,22 +151,21 @@ double lagrangeInterpolation(double x, const std::vector<double>& x_points, cons
     return result;
 }
 
-void delay_us(uint32_t us)
-{
-    RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
-    TIM8->PSC = 0; // Настройка предделителя
-    TIM8->ARR = 80-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
-    TIM8->CNT = 0; // Сброс счетчика
-    TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
+// void delay_us(uint32_t us)
+// {
+//     RCC->APB2ENR |=RCC_APB2ENR_TIM8EN;
+//     TIM8->PSC = 0; // Настройка предделителя
+//     TIM8->ARR = 80-1; // Настройка автоперезагрузки (при 80 MHz тактовой частоте это будет 1 мкс) 
+//     TIM8->CNT = 0; // Сброс счетчика
+//     TIM8->CR1 = TIM_CR1_CEN; // Включение таймера
 
-    while(us--)
-    {
-        while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
-        TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
-    }
-    TIM8->CR1 = 0; // Выключение таймера
-}
-
+//     while(us--)
+//     {
+//         while(!(TIM8->SR & TIM_SR_UIF)); // Ждем, пока флаг обновления не станет 1
+//         TIM8->SR &= ~TIM_SR_UIF; // Сброс флага обновления
+//     }
+//     TIM8->CR1 = 0; // Выключение таймера
+// }
 void ADC_SCAN (void)
 {
   int val_avg=1000;
@@ -181,7 +176,7 @@ void ADC_SCAN (void)
 
    for(int i=0;i<val_avg;i++)
         {
-    for(int j=0;j<10;j++)
+    for(int j=0;j<3;j++)
         {
           ADC1->SQR3 = j;
           ADC1->CR2 |= ADC_CR2_SWSTART;
@@ -191,7 +186,7 @@ void ADC_SCAN (void)
           vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
         }
         }
-        for(int i=0;i<10;i++)
+        for(int i=0;i<3;i++)
         {
           vol_arr[i]=vol_arr_temp[i]/val_avg;
           vol_arr[i]=std::round(vol_arr[i]*100000)/100000;
@@ -200,8 +195,8 @@ void ADC_SCAN (void)
       // uart_1.uart_tx_data(buffer2);
   V_bias=((vol_arr[0])*32.8);//
   temp_int=_TransferFunction(vol_arr[2]);
-  temp_ext=_TransferFunction(vol_arr[6]*2);
-  temp_rad=_TransferFunction(vol_arr[9]*100);
+  //temp_ext=_TransferFunction(vol_arr[6]*2);
+  //temp_rad=_TransferFunction(vol_arr[9]*100);
 
 
 sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
@@ -225,83 +220,71 @@ uart_1.uart_tx_data(buffer2);
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 }
-void SystemClock_Config(void)
-{
-  LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
-  while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_0)
-  {
-  }
-  LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
-  LL_RCC_HSI_SetCalibTrimming(16);
-  LL_RCC_HSI_Enable();
-
-   /* Wait till HSI is ready */
-  while(LL_RCC_HSI_IsReady() != 1)
-  {
-
-  }
-  LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
-  LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
-  LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
-  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
-
-   /* Wait till System clock is ready */
-  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
-  {
-
-  }
-  LL_Init1msTick(16000000);
-  LL_SetSystemCoreClock(16000000);
-}
 // void SystemClock_Config(void)
 // {
-//   // Установка задержки Flash
-//   FLASH->ACR &= ~FLASH_ACR_LATENCY;
-//   while ((FLASH->ACR & FLASH_ACR_LATENCY) != 0)
+//   LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
+//   while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_0)
 //   {
 //   }
 
-//   // Включение HSI
-//   RCC->CR |= RCC_CR_HSION;
-//   while ((RCC->CR & RCC_CR_HSIRDY) == 0)
+//         //pll M
+//     RCC->PLLCFGR=0;
+//     RCC->PLLCFGR |= 8<<RCC_PLLCFGR_PLLM_Pos;         //set PLLM=8
+//     RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_3;         //set PLLN = 168 (1010 1000)
+//     RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_5;         //for 8 or 16 MHz HSE
+//     RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_7;
+//   //LL_RCC_PLL_Enable();
+//      /* Wait till HSI is ready */
+//   while(LL_RCC_PLL_IsReady() != 1)
 //   {
+
 //   }
+//   LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
+//   //LL_RCC_HSI_SetCalibTrimming(16);
+//   LL_RCC_HSI_Enable();
 
-//   // Установка предделителей шин
-//   RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
-
-//   // Установка источника системного тактового сигнала
-//   RCC->CFGR &= ~RCC_CFGR_SW;
-//   RCC->CFGR |= RCC_CFGR_SW_HSI;
-//   while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
+//    /* Wait till HSI is ready */
+//   while(LL_RCC_HSI_IsReady() != 1)
 //   {
+
 //   }
+//   LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+//   LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_4);
+//   LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_2);
+//   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
 
-//   // Инициализация SysTick
-//   SysTick->LOAD = 16000000 - 1;
-//   SysTick->VAL = 0;
-//   SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+//    /* Wait till System clock is ready */
+//    //while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
+//   // {
 
-//   // Установка SystemCoreClock
-//   SystemCoreClock = 16000000;
+//   // }
+//   LL_Init1msTick(168000000);
+//   LL_SetSystemCoreClock(168000000);
 // }
+#include "stm32f4xx.h"
+
+void SystemClock_Config(void) {
+    // ��������� HSI (High-Speed Internal) ����������
+    RCC->CR |= RCC_CR_HSION;
+    while ((RCC->CR & RCC_CR_HSIRDY) == 0) {} // �������� ���������� HSI
+    // ������������ Flash
+    FLASH->ACR = FLASH_ACR_LATENCY_5WS | FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+    // ��������� PLL
+    RCC->PLLCFGR = RCC_PLLCFGR_PLLSRC_HSI | (8 << RCC_PLLCFGR_PLLM_Pos) | (168 << RCC_PLLCFGR_PLLN_Pos);
+    // ��������� PLL
+    RCC->CR |= RCC_CR_PLLON;
+    while ((RCC->CR & RCC_CR_PLLRDY) == 0) {} // �������� ���������� PLL
+    // ����� PLL ��� ��������� ��������� �����
+    RCC->CFGR &= ~RCC_CFGR_SW;
+    RCC->CFGR |= RCC_CFGR_SW_PLL;
+    // �������� ������������ �� PLL
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL) {}
+}
+
 void MX_ADC1_Init(void)
 {
   /* Peripheral clock enable */
   RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-  //RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
- // RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-
-  /* GPIO Configuration */
- // GPIOA->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 | GPIO_MODER_MODER3 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7;
- //GPIOB->MODER |= GPIO_MODER_MODER0 | GPIO_MODER_MODER1;
-
-  /* ADC Configuration */
- //ADC1->CR1 |= 0x1<<ADC_CR1_RES_Pos;
-// 00: 12-bit (15 ADCCLK cycles)
-// 01: 10-bit (13 ADCCLK cycles)
-// 10: 8-bit (11 ADCCLK cycles)
-// 11: 6-bit (9 ADCCLK cycles)
   ADC1->CR2 &= ~ADC_CR2_ALIGN;
   ADC1->CR1 &= ~ADC_CR1_SCAN;
   ADC1->CR2 &= ~ADC_CR2_CONT;
@@ -309,14 +292,7 @@ void MX_ADC1_Init(void)
   ADC1->CR2 |= ADC_CR2_EOCS;
   ADC->CCR &= ~ADC_CCR_MULTI;
   ADC->CCR |= ADC_CCR_ADCPRE;
-
-  /* ADC Channel Configuration */
-  // ADC1->SQR3 &= ~ADC_SQR3_SQ1;
-  //ADC1->SMPR2 |=0x7FFFFFF;
-   ADC1->SMPR2 |=0x0;
-  // ADC1->SMPR2 &= ~ADC_SMPR2_SMP0;
-  // ADC1->SMPR2 |= ADC_SMPR2_SMP0_0 | ADC_SMPR2_SMP0_1;
-
+  ADC1->SMPR2 |=0x0;
   /* ADC Enable */
   ADC1->CR2 |= ADC_CR2_ADON;
 }
@@ -325,48 +301,19 @@ void MX_DAC_Init(void)
 {
   /* Peripheral clock enable */
   RCC->APB1ENR |= RCC_APB1ENR_DACEN;
-  //RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-
-  /* GPIO Configuration */
-  //GPIOA->MODER |= GPIO_MODER_MODER4 | GPIO_MODER_MODER5;
-
-  /* DAC Configuration */
   DAC->CR &= ~DAC_CR_TSEL1;
   DAC->CR &= ~DAC_CR_WAVE1;
-  //DAC->CR |= DAC_CR_BOFF1;
   DAC->CR &= ~DAC_CR_BOFF1;
 
   /* DAC Channel 2 Configuration */
   DAC->CR &= ~DAC_CR_TSEL2;
   DAC->CR &= ~DAC_CR_WAVE2;
-  // DAC->CR |= DAC_CR_BOFF2;
   DAC->CR &=~ DAC_CR_BOFF2;
 
   /* DAC Enable */
   DAC->CR |= DAC_CR_EN1 | DAC_CR_EN2;
 }
 
-void MX_SPI2_Init(void)
-{
-  /* Peripheral clock enable */
-  RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-
-  /* GPIO Configuration */
-  GPIOB->MODER |= GPIO_MODER_MODER12_1 | GPIO_MODER_MODER13_1 | GPIO_MODER_MODER14_1 | GPIO_MODER_MODER15_1;
-  GPIOB->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR12 | GPIO_OSPEEDER_OSPEEDR13 | GPIO_OSPEEDER_OSPEEDR14 | GPIO_OSPEEDER_OSPEEDR15;
-  GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_12 | GPIO_OTYPER_OT_13 | GPIO_OTYPER_OT_14 | GPIO_OTYPER_OT_15);
-  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR12 | GPIO_PUPDR_PUPDR13 | GPIO_PUPDR_PUPDR14 | GPIO_PUPDR_PUPDR15);
-  GPIOB->AFR[1] |= 0x55550000;
-
-  /* SPI Configuration */
-  SPI2->CR1 = SPI_CR1_MSTR | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_BR_0;
- // SPI2->CR2 = SPI_CR2_FRXTH | SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2; ????
-  SPI2->CRCPR = 10;
-
-  /* SPI Enable */
-  SPI2->CR1 |= SPI_CR1_SPE;
-}
 
 static void MX_SPI3_Init(void)
 {
@@ -403,7 +350,7 @@ static void MX_SPI3_Init(void)
   SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
-  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;//LL_SPI_BAUDRATEPRESCALER_DIV2
   SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;//LL_SPI_MSB_FIRST;
   SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStruct.CRCPoly = 10;
@@ -445,14 +392,14 @@ void MX_TIM11_Init(void)
   TIM11->CR1 |= TIM_CR1_CEN;
 }
 
-void MX_TIM3_Init(void)
+void MX_TIM3_Init()
 {
     RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3 clock
-    TIM3->PSC = 8-1; // Set prescaler to 16 (SystemCoreClock = 16MHz)
+    TIM3->PSC = 0; // Set prescaler to 16 (SystemCoreClock = 16MHz)//21
     TIM3->ARR = 1000; // Set auto-reload to 10
     TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2; // Set output compare 3 mode to PWM1
     TIM3->CCER |= TIM_CCER_CC3E; // Enable the output for channel 3
-    TIM3->CCR3 =0;// 44000; // Set the duty cycle to 50%
+    TIM3->CCR3 =999;// Set the duty cycle to 50%
     TIM3->CR1 |= TIM_CR1_CEN; // Start TIM3
 }
 
@@ -492,7 +439,6 @@ void resolve(double x1,double x2,double x3,double y1,double y2,double y3,double 
     
    #endif
    }
-// delay_ms(200);
 }
 
 int main()
@@ -527,7 +473,7 @@ gpio_stm32f405.gpio_init(GPIOA,pin_adc_0,gpio_type::gpio_type_pp,gpio_mode::gpio
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_1,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_2,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_3,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
-gpio_stm32f405.gpio_init(GPIOA,pin_adc_4,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+//gpio_stm32f405.gpio_init(GPIOA,pin_adc_4,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_5,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_6,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 gpio_stm32f405.gpio_init(GPIOA,pin_adc_7,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_analog,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
@@ -542,17 +488,17 @@ gpio_stm32f405.config_af(GPIOB,0,2);//AF1
 
 gpio_stm32f405.gpio_init(GPIOD,led_green,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
 //PLIS
-gpio_stm32f405.gpio_init(GPIOA,DONE,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_input,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_down);
+gpio_stm32f405.gpio_init(GPIOA,DONE,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_input,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::pull_up);
 gpio_stm32f405.gpio_init(GPIOD,PROG_B,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+gpio_stm32f405.gpio_init(GPIOB,Pin_Reset,gpio_type::gpio_type_pp,gpio_mode::gpio_mode_output,gpio_speed::gpio_speed_very_high,gpio_pull_up_down::no_pull_up_down);
+
 
   MX_ADC1_Init();
   MX_DAC_Init();
   MX_SPI3_Init();
 
-
-
-
-LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
+ gpio_stm32f405.set_pin_state(GPIOD,Pin_Reset,0); //run plis.
+ gpio_stm32f405.set_pin_state(GPIOA,11,1); //run plis.
 
 	rx1[4]=32;
 	rx0[0]=170;
@@ -566,127 +512,62 @@ LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_11); //M0 SET
 	rx0[8]=128;	//128
 
 
-//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, rx0[7]+256*rx0[6]);
-//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, rx0[5]+256*rx0[4]);
-
-   //DAC->DHR12R1 = rx0[7] + 256 * rx0[6];
-   //DAC->DHR12R2 = rx0[5] + 256 * rx0[4];
-
-
   while(gpio_stm32f405.get_state_pin(GPIOA,DONE)==0) //PLIS is run?
   {
+  gpio_stm32f405.set_pin_state(GPIOB,11,1); //run plis.
   gpio_stm32f405.set_pin_state(GPIOD,PROG_B,0); //run plis.
-  delay_ms(5000);
+  sys_delay_ms(3000);
+  gpio_stm32f405.set_pin_state(GPIOB,11,0); //run plis.
 	gpio_stm32f405.set_pin_state(GPIOD,PROG_B,1);
-  delay_ms(5000);
+  gpio_stm32f405.set_pin_state(GPIOD,Pin_Reset,0); //run plis.
+  sys_delay_ms(3000);
+  gpio_stm32f405.set_pin_state(GPIOD,Pin_Reset,1); //run plis.
   }
 
-  
-  delay_ms(1000);
+SystemCoreClockUpdate();
   uart_1.usart_init();
-   // MX_SPI2_Init();
-      MX_TIM11_Init();
+  MX_TIM11_Init();
   MX_TIM14_Init();
   MX_TIM3_Init();
 
-SystemCoreClockUpdate();
 
 
-	//	LL_SPI_Enable(SPI2);
-std::vector<double> y_points{1423, 1493, 1545};
-std::vector<double> x_points{-47, -35, -25};
+std::vector<double> y_points{1429, 1472, 1500,1529,1575};
+std::vector<double> x_points{-47.8, -39.9, -34.8,-29.5,-20.5};
 
 //Custom code
-rx1[3]=0xE0;
+rx1[3]=0x00;
 LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);//����������
- LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12e);//�����
+LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, 0x12e);//�����
 rx1[8]=0x00;
 //Custom code
 
 //resolve(-25,-35,-47,1535,1485,1423,0.1);
 
-
-
+   //�����, ��� ������� ����� ��������� �������� �������
+    for(int i=0;i<500;i++)
+    {
+ // ���������� �������� ����������������� ������� � ����� x
+   x__[i] = temp_2[i];
+   y__[i] = lagrangeInterpolation(x__[i], x_points, y_points);
+      //  sprintf(buffer2, ">V_bias_new:%f\n",y__);
+        // uart_1.uart_tx_data(buffer2);
+    }
+ //  temp_2[0]=0;
   while (1)
   {
+//DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+if(temp_int<130)
+{
+pid_int.start(temp_work);
+}
+else
+{
+   TIM3->CCR3 =1;
+}
 
 
-   DWT_CYCCNT  = 0;
-   DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
-   ADC_SCAN();
-   //pid_int.start(temp_work);
-    //TEMPER
-
-//     if(RxBuffer[0]==0x54 && RxBuffer[4]==42)
-//     {
-// int s = 1;
-// int i = -1;
-// res = 0;
-
-// if (RxBuffer[1] == '-') {
-//   s = -1;
-//   i = 1;
-// }
-// while (RxBuffer[++i] != 42) { //iterate until the array end
-//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-// }
-// res = res*s; //answer: -908
-//    temp_work=res;
-//    RxCounter=0;
-//    for(int i=0;i<20;i++)
-//    {
-//     RxBuffer[i]=0;
-//    }
-//     }
-
-//     //BIAS
-//     if(RxBuffer[0]==0x54 && RxBuffer[1]==0x52 && RxBuffer[6]==42||RxBuffer[5]==42)
-//     {
-
-// int i = 1;
-// res = 0;
-
-
-
-// while (RxBuffer[++i] != 42) { //iterate until the array end
-//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-// }
-// if(res>100 && res<1792)
-//   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, res);
-
-//   RxCounter=0;
-//      for(int i=0;i<20;i++)
-//    {
-//     RxBuffer[i]=0;
-//    }
-//     }
-
-//      //BIAS
-//     if(RxBuffer[0]==0x55 && RxBuffer[4]==42)
-//     {
-// //int s = 1;
-// int i = 0;
-
-
-// // if (RxBuffer[0] ==0x55)
-// //  i = 1;
-
-// while (RxBuffer[++i] != 42) { //iterate until the array end
-//   res = res*10 + (RxBuffer[i] - '0'); //generating the integer according to read parsed numbers.
-// }
-// if(res>287 && res<336)
-//   LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, res);
-//  res=0;
-//   RxCounter=0;
-//      for(int i=0;i<20;i++)
-//    {
-//     RxBuffer[i]=0;
-//    }
-//     }
-
-
- //pid_int.calc_PID(temp_work,27000,0,0);
-
+  ADC_SCAN();
 		rx1_s[0]=rx1[0];
 		if ((temp_int<=temp_work+1))
 		{
@@ -709,8 +590,9 @@ rx1[8]=0x00;
 			}
     }
 
-DATA_ADCaccout1=747;
-DATA_ADCaccout3=4419;
+
+    DATA_ADCaccout1=747;
+    DATA_ADCaccout3=4419;
 		rx1_s[3]=rx1[3];
 		rx1_s[4]=DATA_ADCaccout1>>8;//
 		rx1_s[5]=DATA_ADCaccout1&255;
@@ -723,40 +605,11 @@ DATA_ADCaccout3=4419;
 		rx1_s[12]=1;
 		rx1_s[13]=0;
 
-     /*sprintf(buffer2, ">spi_rx16[0]:%d\n",spi_rx16[0]);
+      sprintf(buffer2, ">count:%d\n", static_cast<int>(((static_cast<uint32_t>(spi_rx16[1])<<16) + static_cast<uint32_t>(spi_rx16[0]))/4));
       uart_1.uart_tx_data(buffer2);
-      sprintf(buffer2, ">spi_rx16[1]:%d\n",spi_rx16[1]);
-      uart_1.uart_tx_data(buffer2);
-      sprintf(buffer2, ">spi_rx16[2]:%d\n",spi_rx16[2]);
-      uart_1.uart_tx_data(buffer2);
-      sprintf(buffer2, ">spi_rx16[3]:%d\n",spi_rx16[3]);
-      uart_1.uart_tx_data(buffer2);*/
-      sprintf(buffer2, ">count:%d\n", static_cast<int>(((static_cast<uint32_t>(spi_rx16[1])<<16) + static_cast<uint32_t>(spi_rx16[0]))/2));
-      uart_1.uart_tx_data(buffer2);
-        sprintf(buffer2, ">TR:%d\n", static_cast<int>(DAC1->DHR12R1));
+       sprintf(buffer2, ">U:%d\n", static_cast<int>(DAC1->DHR12R2));
        uart_1.uart_tx_data(buffer2);
-         sprintf(buffer2, ">U:%d\n", static_cast<int>(DAC1->DHR12R2));
-       uart_1.uart_tx_data(buffer2);
-
-       
-
-   // �����, ��� ������� ����� ��������� �������� �������
-//     for(int i=0;i<500;i++)
-//     {
-//  // ���������� �������� ����������������� ������� � ����� x
-//    x__ = temp_2[i];
-//     y__ = lagrangeInterpolation(x__, x_points, y_points);
-//        sprintf(buffer2, ">V_bias_new:%f\n",y__);
-//         uart_1.uart_tx_data(buffer2);
-//     }
-//    temp_2[0]=0;
-
-   
-
-
   }
-
-
 }
 
       extern "C" void USART1_IRQHandler(void)
@@ -764,27 +617,17 @@ DATA_ADCaccout3=4419;
     if (USART1->SR & USART_SR_RXNE) // Проверка флага RXNE
     {
         RxBuffer[RxCounter++] = USART1->DR; // Прием данных
-         //    uart_1.uart_tx_byte(USART1->DR);
-         //    uart_1.uart_tx_byte(10);//\n
-             //char value_T='T';
-            //  if(USART1->DR==value_T)
-            //  {
-
-            //  }
     }
 }
 
 extern "C" void TIM1_TRG_COM_TIM11_IRQHandler(void)
 {
    TIM11->SR=0;//reset flag
-
-
-   //pid_int.calc_PID(temp_work,27000,0,0);
 }
-
 
 extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 {
+
   int i_temp=0;
 	TIM14->SR=0;
 	ptr=0;
@@ -792,32 +635,33 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 
 	if (rx1[8]<100)
 	{
-	if (temp_int<=temp_work+1)
+	if (temp_int<temp_work)
 		{
-			// //baddr=DATA_ADCaccout2-4899;
-			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, (bias[baddr]+rx1[6]+bias_off));
-			// LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_1, threshold);
 		temp_int=round(temp_int*10)/10;
      for(int i=0;i<500;i++)
      {
         if(temp_int==temp_2[i])
         {
-          i_temp=i;
-           LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2,bias_2[i_temp]);
+          //i_temp=i;
+          //y__[i]=( y__[i]*10)/10;
+           //LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2,bias_2[i_temp]);
+          y__[i]=round(y__[i]);
+            dt=0;
+          DWT_CYCCNT  = 0;
+            // DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+           LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2,static_cast<uint32_t>(y__[i]));
+           // DWT_CONTROL &= ~DWT_CTRL_CYCCNTENA_Msk;
+           //  dt=DWT_CYCCNT;
           break;
         }
      }
- 
-
-    	//LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, bias2[][]);
-    
     }
 	else
 	{
-		if (temp_int<=temp_work+1)
-		{
-			 LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
-		}
+		// if (temp_int<=temp_work+1)
+		// {
+		// 	 LL_DAC_ConvertData12RightAligned (DAC1, LL_DAC_CHANNEL_2, 0x100);
+		//}
 	}
 }
 
@@ -841,24 +685,14 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 			}
 			LL_GPIO_SetOutputPin(GPIOA,LL_GPIO_PIN_15);
 			LL_SPI_Disable(SPI3);
-			cnt_v[1]=spi_rx16[1];//cnt_v[1]=spi_rx16[1];
-			cnt_v[0]=spi_rx16[1]>>8;
-			pkuc[0]=spi_rx16[2]>>12;
-			pkuc[1]=spi_rx16[2]&0x00ff;
-			pkuc[2]=(spi_rx16[2]>>8)&0x0f;
-			pkuc[3]=spi_rx16[3]&0x00ff;
-			pkuc[4]=(spi_rx16[3]>>8)&0x0f;
-
- 		return;
+			return;
 	}
 
 
 void Error_Handler(void)
 {
-
   __disable_irq();
   while (1)
   {
   }
-
 }

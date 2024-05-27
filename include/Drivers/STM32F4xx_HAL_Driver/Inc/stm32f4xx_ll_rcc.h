@@ -3201,10 +3201,6 @@ __STATIC_INLINE void LL_RCC_SetSysClkSource(uint32_t Source)
   *
   *         (*) value not defined in all devices.
   */
-__STATIC_INLINE uint32_t LL_RCC_GetSysClkSource(void)
-{
-  return (uint32_t)(READ_BIT(RCC->CFGR, RCC_CFGR_SWS));
-}
 
 /**
   * @brief  Set AHB prescaler

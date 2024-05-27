@@ -39,4 +39,4 @@ public:
   void config_af(GPIO_TypeDef *GPIOx, uint8_t PIN, uint8_t AF);
 };
 
-#endif 
+#endif

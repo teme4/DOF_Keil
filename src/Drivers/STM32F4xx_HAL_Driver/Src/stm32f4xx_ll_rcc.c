@@ -1115,38 +1115,7 @@ uint32_t LL_RCC_GetSPDIFRXClockFreq(uint32_t SPDIFRXxSource)
   * @brief  Return SYSTEM clock frequency
   * @retval SYSTEM clock frequency (in Hz)
   */
-uint32_t RCC_GetSystemClockFreq(void)
-{
-  uint32_t frequency = 0U;
 
-  /* Get SYSCLK source -------------------------------------------------------*/
-  switch (LL_RCC_GetSysClkSource())
-  {
-    case LL_RCC_SYS_CLKSOURCE_STATUS_HSI:  /* HSI used as system clock  source */
-      frequency = HSI_VALUE;
-      break;
-
-    case LL_RCC_SYS_CLKSOURCE_STATUS_HSE:  /* HSE used as system clock  source */
-      frequency = HSE_VALUE;
-      break;
-
-    case LL_RCC_SYS_CLKSOURCE_STATUS_PLL:  /* PLL used as system clock  source */
-      frequency = RCC_PLL_GetFreqDomain_SYS(LL_RCC_SYS_CLKSOURCE_STATUS_PLL);
-      break;
-
-#if defined(RCC_PLLR_SYSCLK_SUPPORT)
-    case LL_RCC_SYS_CLKSOURCE_STATUS_PLLR: /* PLLR used as system clock  source */
-      frequency = RCC_PLL_GetFreqDomain_SYS(LL_RCC_SYS_CLKSOURCE_STATUS_PLLR);
-      break;
-#endif /* RCC_PLLR_SYSCLK_SUPPORT */
-
-    default:
-      frequency = HSI_VALUE;
-      break;
-  }
-
-  return frequency;
-}
 
 /**
   * @brief  Return HCLK clock frequency

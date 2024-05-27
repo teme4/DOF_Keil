@@ -17,6 +17,7 @@
                 "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS/Include",
                 "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                 "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
+                "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/lib/googletest-platformio",
                 ""
             ],
             "browse": {
@@ -31,6 +32,7 @@
                     "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/include/Drivers/CMSIS/Include",
                     "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                     "C:/Users/a.vasilchenko/.platformio/packages/framework-cmsis-stm32f4/Include",
+                    "C:/Users/a.vasilchenko/Documents/PlatformIO/Projects/dof/lib/googletest-platformio",
                     ""
                 ]
             },

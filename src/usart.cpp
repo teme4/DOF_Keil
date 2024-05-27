@@ -6,6 +6,8 @@
 #include "stdio.h"
 #include <string.h>
 
+
+
 uint8_t len=0;
 // uint8_t TxBuffer[100];//="start programm";
 // uint8_t RxBuffer[100];
@@ -20,6 +22,9 @@ uint8_t len=0;
         return roundf(UsarDiv);
       }
 
+
+
+
      /**********************************************************************************
      * @brief Конфигураяция USART
      *********************************************************************************/
@@ -29,7 +34,8 @@ uint8_t len=0;
         USART1->CR3  = 0;
         USART1->CR2 =  0;
         USART1->CR1  = 0;
-        USART1->BRR =  GetBBRsettings(SystemCoreClock,115200);
+        SystemCoreClockUpdate();
+        USART1->BRR = GetBBRsettings(SystemCoreClock,3000000);
         USART1->CR1 =USART_CR1_UE | USART_CR1_TE | USART_CR1_RE| USART_CR1_RXNEIE ; 
        // USART1->CR1 |=USART_CR1_TCIE;
         NVIC_EnableIRQ(USART1_IRQn);
