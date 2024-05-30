@@ -66,7 +66,7 @@ char buffer2[500];
 char buffer[100];
 volatile double temp_work=-30;
 volatile double temp_int;
- double pwm,PID,temp_current,temp_delta,temp_i,temp_d,
+double pwm,PID,temp_current,temp_delta,temp_i,temp_d,
 kp=250,//15
 ki=0.5,//0,25
 kd=1,//2
@@ -166,6 +166,8 @@ double lagrangeInterpolation(double x, const std::vector<double>& x_points, cons
 //     }
 //     TIM8->CR1 = 0; // Выключение таймера
 // }
+volatile double current_temp=0,last_temp,error=0.02;
+uint8_t counter=0,counter2=0;
 void ADC_SCAN (void)
 {
   int val_avg=1000;
@@ -194,13 +196,37 @@ void ADC_SCAN (void)
       // sprintf(buffer2, ">ADC_temp:%d\n",vol_arr_temp[2]);
       // uart_1.uart_tx_data(buffer2);
   V_bias=((vol_arr[0])*32.8);//
-  temp_int=_TransferFunction(vol_arr[2]);
+ 
   //temp_ext=_TransferFunction(vol_arr[6]*2);
   //temp_rad=_TransferFunction(vol_arr[9]*100);
 
-
+temp_int=_TransferFunction(vol_arr[2]);
+if(counter==0)
+{
+  last_temp=temp_int;
+  counter++;
+}
+if(counter2==50)
+{
+  last_temp=temp_int;
+  counter2=0;
+}
+error=std::abs(last_temp)-std::abs(temp_int);
+if(std::abs(error)<0.75)
+{
 sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
 uart_1.uart_tx_data(buffer2);
+sprintf(buffer2, ">error:%-8.1f\n",error);
+uart_1.uart_tx_data(buffer2);
+last_temp=temp_int;
+}
+else
+{
+counter2++;
+}
+
+
+
 // sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
 // uart_1.uart_tx_data(buffer2);
 // sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
@@ -557,6 +583,10 @@ rx1[8]=0x00;
   while (1)
   {
 //DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
+
+
+
+ADC_SCAN();
 if(temp_int<130)
 {
 pid_int.start(temp_work);
@@ -567,7 +597,8 @@ else
 }
 
 
-  ADC_SCAN();
+
+
 		rx1_s[0]=rx1[0];
 		if ((temp_int<=temp_work+1))
 		{

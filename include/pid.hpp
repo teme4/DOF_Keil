@@ -3,6 +3,7 @@
 #define _PID_
 #include "stm32f4xx.h"
 #include "delay.hpp"
+#include <cmath>
 #include "stdio.h"
 #include "usart.hpp"
 extern volatile double temp_int;
