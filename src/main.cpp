@@ -166,73 +166,103 @@ double lagrangeInterpolation(double x, const std::vector<double>& x_points, cons
 //     }
 //     TIM8->CR1 = 0; // Выключение таймера
 // }
-volatile double current_temp=0,last_temp,error=0.02;
-uint8_t counter=0,counter2=0;
+volatile double current_temp=0,last_temp,error=0.02,arr_temp[100],arr_temp_last[100],SUM;
+uint8_t counter2=0;
+
+
+double GetTemperature()
+{
+    uint16_t _parametr{20};
+    std::vector<double> _Filter{};
+    if(_Filter.size()==0)
+    _Filter.reserve(10);
+    while (_Filter.size() < _parametr)
+    {
+        ADC1->SQR3 = 2;
+        ADC1->CR2 |= ADC_CR2_SWSTART;
+        while(!(ADC1->SR & ADC_SR_EOC)){}
+        _Filter.push_back(ADC1->DR*(3.3/4096));
+    }
+       
+
+    double _voltage = 0;
+    _Filter.erase(_Filter.begin());
+        ADC1->SQR3 = 2;
+        ADC1->CR2 |= ADC_CR2_SWSTART;
+        while(!(ADC1->SR & ADC_SR_EOC)){}
+    _Filter.push_back(ADC1->DR*(3.3/4096));
+
+    for (double &value : _Filter)
+        _voltage += value;
+
+    _voltage /= _Filter.size();
+    return _voltage;
+}
+
+
 void ADC_SCAN (void)
 {
-  int val_avg=1000;
-  for(int z=0;z<10;z++)
-  {
-   vol_arr_temp[z]=0;
-  }
+       /*static uint8_t counter;
+        ADC1->SQR3 = 2;
+        ADC1->CR2 |= ADC_CR2_SWSTART;
+        while(!(ADC1->SR & ADC_SR_EOC)){}
+      //  std::vector
+        arr_temp[counter]=ADC1->DR*(3.3/4096);
+        current_temp= arr_temp[counter];
+         if(counter<10)
+          {
+            counter++;
+             return;
+          }
 
-   for(int i=0;i<val_avg;i++)
-        {
-    for(int j=0;j<3;j++)
-        {
-          ADC1->SQR3 = j;
-          ADC1->CR2 |= ADC_CR2_SWSTART;
+          for(int z=0;z<9;z++)
+          {
+            arr_temp[z]=arr_temp[z+1];
+            SUM+=arr_temp[z];
+          }
+          SUM+=current_temp;
+          SUM/=10;*/
 
-          while(!(ADC1->SR & ADC_SR_EOC)){}
-          vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
-          vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
-        }
-        }
-        for(int i=0;i<3;i++)
-        {
-          vol_arr[i]=vol_arr_temp[i]/val_avg;
-          vol_arr[i]=std::round(vol_arr[i]*100000)/100000;
-        }
-      // sprintf(buffer2, ">ADC_temp:%d\n",vol_arr_temp[2]);
-      // uart_1.uart_tx_data(buffer2);
-  V_bias=((vol_arr[0])*32.8);//
- 
+      //   if(counter>=10)
+      //  GetTemperature();
+       // arr_temp[counter]=ADC1->DR*(3.3/4096);
+        temp_int=_TransferFunction(GetTemperature());
+         // temp_int=_TransferFunction(vol_arr[2]);
+         sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
+         uart_1.uart_tx_data(buffer2);
+  
+
+
+  // int val_avg=1000;
+  // for(int z=0;z<10;z++)
+  // {
+  //  vol_arr_temp[z]=0;
+  // }
+
+  //  for(int i=0;i<val_avg;i++)
+  //       {
+  //   for(int j=0;j<3;j++)
+  //       {
+  //         ADC1->SQR3 = j;
+  //         ADC1->CR2 |= ADC_CR2_SWSTART;
+
+  //         while(!(ADC1->SR & ADC_SR_EOC)){}
+  //         vol_arr_temp[j]+=ADC1->DR*(3.3/4096);
+  //         vol_arr_temp[j]=std::round(vol_arr_temp[j]*100)/100;
+  //       }
+  //       }
+  //       for(int i=0;i<3;i++)
+  //       {
+  //         vol_arr[i]=vol_arr_temp[i]/val_avg;
+  //         vol_arr[i]=std::round(vol_arr[i]*100000)/100000;
+  //       }
+  // V_bias=((vol_arr[0])*32.8);//
+  // temp_int=_TransferFunction(vol_arr[2]);
   //temp_ext=_TransferFunction(vol_arr[6]*2);
   //temp_rad=_TransferFunction(vol_arr[9]*100);
 
-temp_int=_TransferFunction(vol_arr[2]);
-if(counter==0)
-{
-  last_temp=temp_int;
-  counter++;
-}
-if(counter2==50)
-{
-  last_temp=temp_int;
-  counter2=0;
-}
-error=std::abs(last_temp)-std::abs(temp_int);
-if(std::abs(error)<0.75)
-{
-sprintf(buffer2, ">temp_int:%-8.1f\n",temp_int);
-uart_1.uart_tx_data(buffer2);
-sprintf(buffer2, ">error:%-8.1f\n",error);
-uart_1.uart_tx_data(buffer2);
-last_temp=temp_int;
-}
-else
-{
-counter2++;
-}
 
 
-
-// sprintf(buffer2, ">temp_ext:%-8.2f\n",temp_ext);
-// uart_1.uart_tx_data(buffer2);
-// sprintf(buffer2, ">temp_rad:%-8.2f\n",temp_rad);
-// uart_1.uart_tx_data(buffer2);
-// sprintf(buffer2, ">v_bias:%-8.2f\n",V_bias);
-// uart_1.uart_tx_data(buffer2);
 	if (temp_int>=temp_work+1)
 	{
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_11); //red
@@ -246,6 +276,8 @@ counter2++;
 	LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_10); //green
 	}
 }
+
+
 // void SystemClock_Config(void)
 // {
 //   LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
@@ -582,10 +614,6 @@ rx1[8]=0x00;
  //  temp_2[0]=0;
   while (1)
   {
-//DWT_CONTROL|= DWT_CTRL_CYCCNTENA_Msk;
-
-
-
 ADC_SCAN();
 if(temp_int<130)
 {
@@ -698,7 +726,7 @@ extern "C" void TIM8_TRG_COM_TIM14_IRQHandler(void)
 
 	LL_GPIO_ResetOutputPin(GPIOA,LL_GPIO_PIN_15);
 	LL_SPI_Enable(SPI3);
-	spi_rx16[0]=0;
+      spi_rx16[0]=0;
 			spi_rx16[1]=0;
 			spi_rx16[2]=0;
 			spi_rx16[3]=0;

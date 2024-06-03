@@ -3,13 +3,13 @@ extern volatile double last_temp;
  double integral=0,prevTemp=0;
 void pid::start(double set_temp)
 {
-    temp_int=last_temp;
+   // temp_int=last_temp;
    // double error2=0;
     sprintf(buffer, ">set:%f\n",set_temp);
     uart_1.uart_tx_data(buffer);
     temp_delta=temp_int-set_temp;//-
     kp=250,//50
-    ki=0.001,//0.001
+    ki=0.0005,//0.001
     integral+=temp_delta*ki;
     pwm=temp_delta*kp+integral;//+D*kd;
    
